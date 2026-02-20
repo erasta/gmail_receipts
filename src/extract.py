@@ -94,13 +94,8 @@ def main() -> None:
         logger.error("Results file not found: %s", results_path)
         sys.exit(1)
 
-    receipt_files: list[str] = []
-    for line in results_path.read_text(encoding="utf-8").splitlines():
-        if not line.strip():
-            continue
-        record = json.loads(line)
-        if record.get("is_receipt"):
-            receipt_files.append(record["filename"])
+    results = json.loads(results_path.read_text(encoding="utf-8"))
+    receipt_files = [r["filename"] for r in results if r.get("is_receipt")]
 
     logger.info("Found %d receipts to extract", len(receipt_files))
 

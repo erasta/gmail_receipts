@@ -1,0 +1,28 @@
+Content-Type: multipart/alternative;
+ boundary="===============1576224741803756479=="
+MIME-Version: 1.0
+From: newsletter@techblog.com
+To: user@gmail.com
+Subject: This week in AI - Newsletter #47
+Date: Fri, 20 Jun 2025 14:00:00 -0000
+Message-ID: <fake-2025-06-20_newsletter.eml@mock>
+
+--===============1576224741803756479==
+Content-Type: text/plain; charset="utf-8"
+MIME-Version: 1.0
+Content-Transfer-Encoding: base64
+
+V2Vla2x5IEFJIE5ld3MKSGVyZSBhcmUgdGhlIHRvcCBzdG9yaWVzIHRoaXMgd2VlayBpbiBhcnRp
+ZmljaWFsIGludGVsbGlnZW5jZS4uLgoxLiBOZXcgYnJlYWt0aHJvdWdoIGluIGxhbmd1YWdlIG1v
+ZGVscwoyLiBSb2JvdGljcyB1cGRhdGU=
+
+--===============1576224741803756479==
+Content-Type: text/html; charset="utf-8"
+MIME-Version: 1.0
+Content-Transfer-Encoding: base64
+
+PGgxPldlZWtseSBBSSBOZXdzPC9oMT48cD5IZXJlIGFyZSB0aGUgdG9wIHN0b3JpZXMgdGhpcyB3
+ZWVrIGluIGFydGlmaWNpYWwgaW50ZWxsaWdlbmNlLi4uPC9wPjxwPjEuIE5ldyBicmVha3Rocm91
+Z2ggaW4gbGFuZ3VhZ2UgbW9kZWxzPC9wPjxwPjIuIFJvYm90aWNzIHVwZGF0ZTwvcD4=
+
+--===============1576224741803756479==--

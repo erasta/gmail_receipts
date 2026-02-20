@@ -1,0 +1,27 @@
+Content-Type: multipart/alternative;
+ boundary="===============5276934044491776142=="
+MIME-Version: 1.0
+From: noreply@store.apple.com
+To: user@gmail.com
+Subject: Your receipt from Apple
+Date: Sun, 15 Jun 2025 10:30:00 -0000
+Message-ID: <fake-2025-06-15_apple_receipt.eml@mock>
+
+--===============5276934044491776142==
+Content-Type: text/plain; charset="utf-8"
+MIME-Version: 1.0
+Content-Transfer-Encoding: base64
+
+UmVjZWlwdApNYWNCb29rIEFpciBNMyAtICQxLDI5OS4wMApUYXg6ICQxMDcuMTcKVG90YWw6ICQx
+LDQwNi4xNwpQYXltZW50OiBWaXNhIGVuZGluZyBpbiA0MjQy
+
+--===============5276934044491776142==
+Content-Type: text/html; charset="utf-8"
+MIME-Version: 1.0
+Content-Transfer-Encoding: base64
+
+PGgxPlJlY2VpcHQ8L2gxPjxwPk1hY0Jvb2sgQWlyIE0zIC0gJDEsMjk5LjAwPC9wPjxwPlRheDog
+JDEwNy4xNzwvcD48cD5Ub3RhbDogJDEsNDA2LjE3PC9wPjxwPlBheW1lbnQ6IFZpc2EgZW5kaW5n
+IGluIDQyNDI8L3A+
+
+--===============5276934044491776142==--

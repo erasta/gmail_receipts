@@ -1,0 +1,28 @@
+Content-Type: multipart/alternative;
+ boundary="===============4344360518468550050=="
+MIME-Version: 1.0
+From: order-confirm@amazon.com
+To: user@gmail.com
+Subject: Order Confirmation #112-9876543-2109876
+Date: Sat, 10 May 2025 16:45:00 -0000
+Message-ID: <fake-2025-05-10_amazon_order.eml@mock>
+
+--===============4344360518468550050==
+Content-Type: text/plain; charset="utf-8"
+MIME-Version: 1.0
+Content-Transfer-Encoding: base64
+
+T3JkZXIgQ29uZmlybWF0aW9uCllvdXIgb3JkZXIgaGFzIGJlZW4gcGxhY2VkLgpVU0ItQyBIdWIg
+LSAkMjkuOTkKU2hpcHBpbmc6IEZyZWUKVG90YWw6ICQyOS45OQpFc3RpbWF0ZWQgZGVsaXZlcnk6
+IE1heSAxNCwgMjAyNQ==
+
+--===============4344360518468550050==
+Content-Type: text/html; charset="utf-8"
+MIME-Version: 1.0
+Content-Transfer-Encoding: base64
+
+PGgyPk9yZGVyIENvbmZpcm1hdGlvbjwvaDI+PHA+WW91ciBvcmRlciBoYXMgYmVlbiBwbGFjZWQu
+PC9wPjxwPlVTQi1DIEh1YiAtICQyOS45OTwvcD48cD5TaGlwcGluZzogRnJlZTwvcD48cD5Ub3Rh
+bDogJDI5Ljk5PC9wPjxwPkVzdGltYXRlZCBkZWxpdmVyeTogTWF5IDE0LCAyMDI1PC9wPg==
+
+--===============4344360518468550050==--

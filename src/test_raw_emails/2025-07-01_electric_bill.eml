@@ -1,0 +1,26 @@
+Content-Type: multipart/alternative;
+ boundary="===============4093015891788056245=="
+MIME-Version: 1.0
+From: billing@electricity.co.il
+To: user@gmail.com
+Subject: =?utf-8?b?15fXqdeR15XXoNeZ16og15fXqdee15wgLSDXmdeV16DXmSAyMDI1?=
+Date: Tue, 01 Jul 2025 08:00:00 -0000
+Message-ID: <fake-2025-07-01_electric_bill.eml@mock>
+
+--===============4093015891788056245==
+Content-Type: text/plain; charset="utf-8"
+MIME-Version: 1.0
+Content-Transfer-Encoding: base64
+
+15fXqdeR15XXoNeZ16og157XoS/Xp9eR15zXlArXodeb15XXnSDXnNeq16nXnNeV1506IOKCqjM0
+Mi41MArXqteQ16jXmdeaOiAwMS8wNy8yMDI1
+
+--===============4093015891788056245==
+Content-Type: text/html; charset="utf-8"
+MIME-Version: 1.0
+Content-Transfer-Encoding: base64
+
+PHA+15fXqdeR15XXoNeZ16og157XoS/Xp9eR15zXlDwvcD48cD7Xodeb15XXnSDXnNeq16nXnNeV
+1506IOKCqjM0Mi41MDwvcD48cD7XqteQ16jXmdeaOiAwMS8wNy8yMDI1PC9wPg==
+
+--===============4093015891788056245==--
