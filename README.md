@@ -1,20 +1,20 @@
 # Gmail Receipt Extractor
 
-סקריפט שמוריד מיילים מ-Gmail, מזהה קבלות באמצעות LLM מקומי, ומחלץ אותן לתיקייה.
+A script that downloads emails from Gmail, identifies receipts using a local LLM, and extracts them to a folder.
 
-## מבנה
+## Structure
 
 ```
 gmail_receipts/
 ├── README.md
-├── .env.gpg               ← credentials מוצפנים
-├── run.sh                 ← מפענח credentials + מריץ הורדה
-├── encrypt.sh             ← מצפין .env ומוחק אותו
-├── raw_emails/            ← מיילים שהורדו
-├── output/                ← קבלות סופיות
+├── .env.gpg               ← encrypted credentials
+├── run.sh                 ← decrypts credentials + runs download
+├── encrypt.sh             ← encrypts .env and deletes it
+├── raw_emails/            ← downloaded emails
+├── output/                ← final receipts
 ├── classification_results.json
 │
-└── src/                   ← קוד (קלוד קוד עובד רק כאן)
+└── src/                   ← code (Claude Code works only here)
     ├── .venv/
     ├── CLAUDE.md
     ├── download.py
@@ -24,16 +24,16 @@ gmail_receipts/
     └── requirements.txt
 ```
 
-## אבטחה
+## Security
 
-קלוד קוד מורץ מתוך `src/` בלבד — אין לו גישה ל-credentials או למיילים.
+Claude Code runs from `src/` only — it has no access to credentials or emails.
 
 ## Setup
 
 ```bash
-sh setup.sh          # יוצר תיקיות, venv, מתקין תלויות
-nano .env            # ערוך עם המייל וה-App Password שלך
-sh encrypt.sh        # מצפין ומוחק
+sh setup.sh          # creates folders, venv, installs dependencies
+nano .env            # edit with your email and App Password
+sh encrypt.sh        # encrypts and deletes .env
 ```
 
 ### Prerequisites
@@ -42,15 +42,15 @@ sh encrypt.sh        # מצפין ומוחק
 - GPG
 - Gmail App Password: https://myaccount.google.com/apppasswords
 
-## הרצה
+## Usage
 
 ```bash
-sh run.sh --since 2025-01-01 --before 2026-01-01        # הורדה
-src/.venv/bin/python src/classify.py                      # סיווג
-src/.venv/bin/python src/extract.py                       # חילוץ
+sh run.sh --since 2025-01-01 --before 2026-01-01        # download
+src/.venv/bin/python src/classify.py                      # classify
+src/.venv/bin/python src/extract.py                       # extract
 ```
 
-## פיתוח
+## Development
 
 ```bash
 cd src && claude

@@ -1,26 +1,26 @@
 # Gmail Receipt Extractor — Technical Spec
 
-## מטרה
+## Purpose
 
-סקריפט Python שמזהה קבלות מתוך קבצי `.eml` באמצעות LLM מקומי, ומחלץ את הקבלה לקובץ.
+A Python script that identifies receipts from `.eml` files using a local LLM, and extracts the receipt to a file.
 
-## אבטחה
+## Security
 
-- **אין לך גישה לתיקייה מעל `src/`**
-- **אל תנסה לקרוא `.env`, `.env.gpg`, או כל קובץ מחוץ ל-`src/`**
-- הקוד מקבל נתיבים כפרמטרים, לא hardcode
+- **You have no access to the directory above `src/`**
+- **Do not try to read `.env`, `.env.gpg`, or any file outside `src/`**
+- Code receives paths as parameters, no hardcoding
 
-## מבנה
+## Structure
 
 ```
-gmail_receipts/              ← אין לך גישה
+gmail_receipts/              ← no access
 ├── .env.gpg
 ├── run.sh
 ├── raw_emails/
 ├── output/
 ├── classification_results.json
 │
-└── src/                     ← אתה כאן
+└── src/                     ← you are here
     ├── .venv/
     ├── CLAUDE.md
     ├── download.py
@@ -30,17 +30,17 @@ gmail_receipts/              ← אין לך גישה
     └── requirements.txt
 ```
 
-## סביבה
+## Environment
 
-- **Virtual environment** ב-`.venv/` (בתוך `src/`)
-- הסקריפטים מורצים עם `.venv/bin/python` מתיקיית הפרויקט
+- **Virtual environment** in `.venv/` (inside `src/`)
+- Scripts are run with `.venv/bin/python` from the project directory
 
-## נתיבי ברירת מחדל
+## Default Paths
 
-הסקריפטים מורצים מ-`gmail_receipts/` (לא מ-`src/`):
+Scripts are run from `gmail_receipts/` (not from `src/`):
 
-| פרמטר | ברירת מחדל |
-|--------|-----------|
+| Parameter | Default |
+|-----------|---------|
 | `--input-dir` | `raw_emails/` |
 | `--output-dir` | `output/` |
 | `--results-file` | `classification_results.json` |
@@ -49,37 +49,37 @@ gmail_receipts/              ← אין לך גישה
 
 ## download.py
 
-הורדת מיילים מ-Gmail דרך IMAP.
+Download emails from Gmail via IMAP.
 
 ```bash
 python src/download.py --since 2025-01-01 --before 2026-01-01
 ```
 
-- חיבור IMAP ל-`imap.gmail.com:993` (SSL)
-- credentials מ-environment variables: `EMAIL_ADDRESS`, `APP_PASSWORD`
-- סינון בצד השרת: `SINCE` + `BEFORE`
-- שמירת כל מייל כ-`{YYYY-MM-DD}_{message_id_hash[:12]}.eml`
-- שמירת `metadata.jsonl` — שורה per מייל: filename, subject, from, date, attachment_names
-- Idempotent: דילוג לפי message ID hash
+- IMAP connection to `imap.gmail.com:993` (SSL)
+- Credentials from environment variables: `EMAIL_ADDRESS`, `APP_PASSWORD`
+- Server-side filtering: `SINCE` + `BEFORE`
+- Save each email as `{YYYY-MM-DD}_{message_id_hash[:12]}.eml`
+- Save `metadata.jsonl` — one line per email: filename, subject, from, date, attachment_names
+- Idempotent: skip by message ID hash
 
 ---
 
 ## classify.py
 
-סיווג כל מייל כקבלה / לא קבלה.
+Classify each email as receipt / not receipt.
 
 ```bash
 python src/classify.py [--input-dir raw_emails/] [--results-file classification_results.json] [--model phi3.5]
 ```
 
-### מה נשלח ל-LLM
-- `from` (שם + כתובת)
+### What is sent to the LLM
+- `from` (name + address)
 - `subject`
-- 200 מילים ראשונות מגוף המייל (plain text)
-- שמות attachments
+- First 200 words of the email body (plain text)
+- Attachment names
 
-### Hints (מתווספים ל-prompt)
-- `has_money_amount` — regex: ₪/$/€/ILS/USD + מספר
+### Hints (added to prompt)
+- `has_money_amount` — regex: ₪/$/€/ILS/USD + number
 - `suspicious_sender` — receipt, invoice, noreply, billing, order, payment
 - `suspicious_subject` — קבלה, חשבונית, receipt, invoice, order, confirmation, payment
 
@@ -105,41 +105,42 @@ Respond with ONLY a JSON object, no other text:
 
 ### LLM
 - Ollama HTTP API: `http://localhost:11434/api/generate`
-- מודל ברירת מחדל: `phi3.5`
-- חומרה: RTX A1000, 4GB VRAM
-- צפי: 0.5-1.5 שניות למייל
+- Default model: `phi3.5`
+- Hardware: RTX A1000, 4GB VRAM
+- Expected: 0.5-1.5 seconds per email
 
-### פלט
-- כתיבה incrementally ל-results file
-- כל שורה: `{filename, is_receipt, confidence, reason}`
-- Resume: דילוג על מיילים שכבר סווגו
-- סף: `is_receipt == true` (בלי סינון confidence — העדפה ל-recall)
+### Output
+- Writes incrementally to results file (JSON array)
+- Each entry: `{filename, from, subject, body_preview, is_receipt, confidence, reason, classify_time_sec}`
+- Resume: skips already-classified emails
+- Threshold: `is_receipt == true` (no confidence filtering — preference for recall)
+- `--reset` flag to clear previous results
 
 ---
 
 ## extract.py
 
-חילוץ קבלות מהמיילים שסווגו.
+Extract receipts from classified emails.
 
 ```bash
 python src/extract.py [--input-dir raw_emails/] [--output-dir output/] [--results-file classification_results.json]
 ```
 
-לכל מייל עם `is_receipt == true`:
-1. יש attachment PDF? → שמירה ישירה
-2. יש attachment תמונה (jpg/png)? → שמירה ישירה
-3. אין attachment רלוונטי? → HTML → PDF עם `weasyprint`
-4. כמה attachments רלוונטיים? → שמירת כולם
+For each email with `is_receipt == true`:
+1. Has PDF attachment? → save directly
+2. Has image attachment (jpg/png)? → save directly
+3. No relevant attachment? → HTML → PDF with `weasyprint`
+4. Multiple relevant attachments? → save all
 
-שם קובץ: `{YYYY-MM-DD}_{sanitized_subject}_{index}.{ext}`
+Filename: `{YYYY-MM-DD}_{sanitized_subject}_{index}.{ext}`
 
 ---
 
-## דרישות כלליות
+## General Requirements
 
-- `tqdm` progress bar בכל סקריפט
-- Logging לקובץ ול-stderr
-- `argparse` לכל הפרמטרים
-- Idempotent — הרצה חוזרת בטוחה
-- מייל בעייתי לא עוצר את הריצה, רק מתועד ב-log
+- `tqdm` progress bar in every script
+- Logging to file and stderr
+- `argparse` for all parameters
+- Idempotent — safe to re-run
+- Problematic emails don't stop execution, only logged
 - Type hints
