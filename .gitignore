@@ -1,0 +1,6 @@
+.env
+.env.gpg
+src/.venv/
+raw_emails/
+output/
+classification_results.json
