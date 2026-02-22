@@ -7,3 +7,4 @@ classification_results.json
 *.pyc
 __pycache__
 src/test_results.json
+src/test_raw_emails/

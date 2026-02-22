@@ -14,21 +14,39 @@ from utils import setup_logging
 
 logger = setup_logging("classify")
 
-PROMPT_TEMPLATE = """You are classifying emails. Determine if this email is a receipt, invoice, payment confirmation, or expense-related document.
+PROMPT_TEMPLATE = """Classify this email: is it a financial transaction document?
 
-Hints from rule-based analysis:
+Answer "true" for ANY of these:
+- Receipt or proof of payment
+- Invoice or bill
+- Order confirmation with a price
+- Subscription charge or renewal
+- Bank/credit card transaction alert
+- Taxi, ride, delivery, or travel booking confirmation with a charge
+- Donation receipt
+- Refund notification
+- Utility bill (electricity, water, internet, phone)
+- Government fee or tax payment
+
+Answer "false" for:
+- Newsletters, marketing, promotions
+- Shipping/delivery status updates (no price)
+- Account notifications (password reset, login alert)
+- Personal or work conversations
+- Social media notifications
+
+The email may be in ANY language (English, Hebrew, German, Bulgarian, Norwegian, etc.).
+
+Hints:
 {hints}
 
-Email metadata:
 From: {from_}
 Subject: {subject}
-Attachment names: {attachments}
+Attachments: {attachments}
+Body: {body_preview}
 
-Email body (first 200 words):
-{body_preview}
-
-Respond with ONLY a JSON object, no other text:
-{{"is_receipt": true/false, "confidence": 0.0-1.0, "reason": "brief explanation"}}"""
+Reply with ONLY this JSON:
+{{"is_receipt": true, "confidence": 0.9, "reason": "max 15 words"}}"""
 
 
 def parse_args() -> argparse.Namespace:
