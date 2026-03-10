@@ -23,6 +23,8 @@ exec docker run -it --rm \
     apt-get install -y python3 python3-pip python3-venv
     echo "==> Installing Claude Code..."
     npm install -g @anthropic-ai/claude-code
+    echo "==> Fixing permissions..."
+    chown -R node:node /home/node/.claude/projects
     echo "==> Starting Claude..."
     exec su - node -c "cd $PROJECT_DIR && claude"
   '
