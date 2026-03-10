@@ -17,7 +17,7 @@ exec docker run -it --rm \
     apt-get update
     apt-get install -y python3 python3-pip python3-venv
     echo "==> Installing Claude Code..."
-    npm install -g @anthropic-ai/claude-code
+    su - node -c "curl -fsSL https://claude.ai/install.sh | bash"
     echo "==> Starting Claude..."
     exec su - node -c "cd $(pwd) && claude"
   '
