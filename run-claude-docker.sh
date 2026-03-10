@@ -8,6 +8,7 @@ exec docker run -it --rm \
   -v "$PROJECT_DIR":"$PROJECT_DIR" \
   -v "$HOME/.claude":/home/node/.claude \
   -v "$HOME/.claude.json":/home/node/.claude.json \
+  -e TERM=xterm-256color \
   -w "$PROJECT_DIR" \
   node:22-bookworm \
   bash -c '
@@ -18,5 +19,5 @@ exec docker run -it --rm \
     echo "==> Installing Claude Code..."
     npm install -g @anthropic-ai/claude-code
     echo "==> Starting Claude..."
-    exec su node -c "cd $PROJECT_DIR && HOME=/home/node claude"
+    exec su - node -c "cd $(pwd) && claude"
   '
