@@ -1,7 +1,10 @@
 import os
+from pathlib import Path
 
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
 from app.classification_store import ClassificationStore
@@ -13,6 +16,8 @@ from mock_gmail.classifier import MockClassifier
 from mock_gmail.client import GmailApiError, MockGmailService
 
 app = FastAPI(title="Gmail Receipts API")
+
+_FRONTEND_DIST = Path(__file__).parent.parent.parent / "frontend" / "dist"
 
 app.add_middleware(
     CORSMiddleware,
@@ -147,3 +152,12 @@ def set_classifier(req: SetClassifierRequest):
     store.clear()
     worker = ClassificationWorker(_classifiers[_active_classifier], store)
     return {"classifier": _active_classifier, "changed": True}
+
+
+# --- Serve frontend static files (must be after all /api routes) ---
+if _FRONTEND_DIST.is_dir():
+    app.mount("/assets", StaticFiles(directory=_FRONTEND_DIST / "assets"), name="static")
+
+    @app.get("/{full_path:path}")
+    def serve_frontend(full_path: str):
+        return FileResponse(_FRONTEND_DIST / "index.html")
