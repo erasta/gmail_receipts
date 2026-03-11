@@ -26,5 +26,5 @@ exec docker run -it --rm \
     echo "==> Fixing permissions..."
     chown -R node:node /home/node/.claude/projects
     echo "==> Starting Claude..."
-    exec su - node -c "cd $PROJECT_DIR && claude"
+    exec su - node -c "cd $PROJECT_DIR && claude --dangerously-skip-permissions"
   '
