@@ -6,8 +6,8 @@ IMAGE_NAME="claude-code-env"
 
 mkdir -p "$HOME/.claude/projects/$PROJECT_SLUG"
 
-echo "==> Creating Dockerfile..."
-cat <<'EOF' > "$PROJECT_DIR/Dockerfile.claude"
+echo "==> Building Docker image..."
+docker build -t "$IMAGE_NAME" -f - "$PROJECT_DIR" <<'EOF'
 FROM node:22-bookworm
 
 RUN apt-get update \
@@ -19,9 +19,6 @@ ENV NPM_CONFIG_PREFIX=/home/node/.npm-global
 ENV PATH=/home/node/.npm-global/bin:$PATH
 RUN npm install -g @anthropic-ai/claude-code
 EOF
-
-echo "==> Building Docker image..."
-docker build -t "$IMAGE_NAME" -f "$PROJECT_DIR/Dockerfile.claude" "$PROJECT_DIR"
 
 echo "==> Starting Claude..."
 exec docker run -it --rm \
