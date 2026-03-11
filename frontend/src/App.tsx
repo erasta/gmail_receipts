@@ -2,7 +2,6 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   AppBar,
   Box,
-  Button,
   Card,
   CardContent,
   Chip,
@@ -10,6 +9,7 @@ import {
   Collapse,
   Container,
   Alert,
+  IconButton,
   Paper,
   Table,
   TableBody,
@@ -22,9 +22,11 @@ import {
   ToggleButton,
   ToggleButtonGroup,
   Toolbar,
+  Tooltip,
   Typography,
 } from '@mui/material';
 import RefreshIcon from '@mui/icons-material/Refresh';
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import {
   classifyEmails,
   fetchClassifications,
@@ -63,6 +65,15 @@ function formatFrom(from: string): string {
   return from;
 }
 
+const STATUS_TOOLTIP: Record<EmailStatus, string> = {
+  unclassified: 'Not yet classified',
+  pending: 'Waiting in queue',
+  classifying: 'Classification in progress',
+  receipt: 'Classified as a receipt',
+  not_receipt: 'Classified as not a receipt',
+  error: 'Classification failed',
+};
+
 function StatusChip({ status }: { status: EmailStatus }) {
   const config: Record<EmailStatus, {
     label: string;
@@ -77,7 +88,11 @@ function StatusChip({ status }: { status: EmailStatus }) {
     error: { label: 'Error', color: 'error', variant: 'filled' },
   };
   const { label, color, variant } = config[status];
-  return <Chip label={label} color={color} variant={variant} size="small" />;
+  return (
+    <Tooltip title={STATUS_TOOLTIP[status]}>
+      <Chip label={label} color={color} variant={variant} size="small" sx={{ maxWidth: 'none' }} />
+    </Tooltip>
+  );
 }
 
 function StatsBar({
@@ -92,101 +107,88 @@ function StatsBar({
   classifying: number;
 }) {
   const cards = [
-    { label: 'Total Emails', value: totalEmails, color: '#1a237e' },
-    { label: 'Receipts', value: totalReceipts, color: '#2e7d32' },
-    { label: 'Non-Receipts', value: totalNonReceipts, color: '#757575' },
+    { label: 'Total Emails', value: totalEmails, color: '#1a237e', tooltip: 'Total number of emails loaded' },
+    { label: 'Receipts', value: totalReceipts, color: '#2e7d32', tooltip: 'Emails classified as receipts' },
+    { label: 'Non-Receipts', value: totalNonReceipts, color: '#757575', tooltip: 'Emails classified as non-receipts' },
   ];
   if (classifying > 0) {
-    cards.push({ label: 'Classifying', value: classifying, color: '#1565c0' });
+    cards.push({ label: 'Classifying', value: classifying, color: '#1565c0', tooltip: 'Emails currently being classified' });
   }
   return (
-    <Box sx={{ display: 'flex', gap: 1.5, mb: 1 }}>
+    <Box sx={{ display: 'flex', gap: 1, mb: 1 }}>
       {cards.map((c) => (
-        <Card key={c.label} sx={{ flex: 1 }}>
-          <CardContent sx={{ py: 1, px: 1.5, '&:last-child': { pb: 1 } }}>
-            <Typography variant="caption" color="text.secondary" sx={{ textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-              {c.label}
-            </Typography>
-            <Typography variant="h5" fontWeight={700} sx={{ color: c.color }}>
-              {c.value}
-            </Typography>
-          </CardContent>
-        </Card>
+        <Tooltip key={c.label} title={c.tooltip}>
+          <Card sx={{ flex: 1 }}>
+            <CardContent sx={{ py: 0.75, px: 1.5, '&:last-child': { pb: 0.75 } }}>
+              <Typography variant="caption" color="text.secondary" sx={{ textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                {c.label}
+              </Typography>
+              <Typography variant="h6" fontWeight={700} sx={{ color: c.color }}>
+                {c.value}
+              </Typography>
+            </CardContent>
+          </Card>
+        </Tooltip>
       ))}
     </Box>
   );
 }
 
-function EmailExpandedRow({
+function MetadataRow({
+  email,
+  receipt,
+}: {
+  email: Email;
+  receipt: Receipt | undefined;
+}) {
+  return (
+    <TableRow>
+      <TableCell colSpan={7} sx={{ py: 0, px: 0 }}>
+        <Collapse in>
+          <Box sx={{ px: 2, py: 1, bgcolor: '#f5f6fa', borderBottom: '1px solid #e0e0e0' }}>
+            <Box sx={{ display: 'flex', gap: 2.5, fontSize: '0.82rem', color: 'text.secondary', flexWrap: 'wrap' }}>
+              <span><strong>From:</strong> {email.from_address}</span>
+              <span><strong>To:</strong> {email.to_address}</span>
+              <span><strong>Date:</strong> {email.date}</span>
+              {receipt?.vendor && <span><strong>Vendor:</strong> {receipt.vendor}</span>}
+              {receipt?.amount && <span><strong>Amount:</strong> {receipt.currency ?? ''}{receipt.amount}</span>}
+            </Box>
+          </Box>
+        </Collapse>
+      </TableCell>
+    </TableRow>
+  );
+}
+
+function ContentRow({
   email,
   receipt,
   status,
   errorMsg,
-  onReclassify,
 }: {
   email: Email;
   receipt: Receipt | undefined;
   status: EmailStatus;
   errorMsg?: string;
-  onReclassify: () => void;
 }) {
   return (
     <TableRow>
-      <TableCell colSpan={4} sx={{ py: 0 }}>
+      <TableCell colSpan={7} sx={{ py: 0, px: 0 }}>
         <Collapse in>
-          <Box sx={{ p: 2, bgcolor: '#fafbff', borderBottom: '2px solid #e8eaf6' }}>
-            <Box sx={{ display: 'flex', gap: 3, mb: 1.5, fontSize: '0.82rem', color: 'text.secondary' }}>
-              <span><strong>From:</strong> {email.from_address}</span>
-              <span><strong>To:</strong> {email.to_address}</span>
-              <span><strong>Date:</strong> {email.date}</span>
-            </Box>
-
-            <Paper variant="outlined" sx={{ display: 'flex', gap: 1.5, alignItems: 'center', p: 1, mb: 1.5 }}>
-              <StatusChip status={status} />
-              {receipt?.classification && (
-                <>
-                  <Typography variant="body2" color="text.secondary">
-                    Confidence: {(receipt.classification.confidence * 100).toFixed(0)}%
-                  </Typography>
-                  {receipt.vendor && (
-                    <Typography variant="body2">
-                      <strong>Vendor:</strong> {receipt.vendor}
-                    </Typography>
-                  )}
-                  {receipt.amount && (
-                    <Typography variant="body2">
-                      <strong>Amount:</strong> {receipt.currency ?? ''}{receipt.amount}
-                    </Typography>
-                  )}
-                  {receipt.classification.reason && (
-                    <Typography variant="body2" color="text.secondary" fontStyle="italic">
-                      {receipt.classification.reason}
-                    </Typography>
-                  )}
-                </>
-              )}
-              {status === 'error' && errorMsg && (
-                <Typography variant="body2" color="error" fontStyle="italic">
-                  {errorMsg}
-                </Typography>
-              )}
-              <Button
-                size="small"
-                variant="outlined"
-                startIcon={<RefreshIcon />}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onReclassify();
-                }}
-                disabled={status === 'pending' || status === 'classifying'}
-                sx={{ ml: 'auto' }}
-              >
-                Re-classify
-              </Button>
-            </Paper>
+          <Box sx={{ px: 2, py: 1.5, bgcolor: '#fafbff', borderBottom: '2px solid #e8eaf6' }}>
+            {receipt?.classification?.reason && (
+              <Typography variant="body2" color="text.secondary" fontStyle="italic" sx={{ mb: 0.75 }}>
+                <strong>Reason:</strong> {receipt.classification.reason}
+              </Typography>
+            )}
+            {status === 'error' && errorMsg && (
+              <Typography variant="body2" color="error" fontStyle="italic" sx={{ mb: 0.75 }}>
+                {errorMsg}
+              </Typography>
+            )}
 
             {email.attachments.length > 0 && (
-              <Box sx={{ mb: 1, fontSize: '0.8rem', color: 'text.secondary' }}>
+              <Box sx={{ mb: 0.75, fontSize: '0.8rem', color: 'text.secondary' }}>
                 <strong>Attachments: </strong>
                 {email.attachments.map((a, i) => (
                   <Chip key={i} label={a} size="small" sx={{ mr: 0.5 }} />
@@ -200,10 +202,10 @@ function EmailExpandedRow({
                 p: 1.5,
                 whiteSpace: 'pre-wrap',
                 fontFamily: 'inherit',
-                fontSize: '0.88rem',
-                lineHeight: 1.6,
+                fontSize: '0.82rem',
+                lineHeight: 1.5,
                 color: '#444',
-                maxHeight: 300,
+                maxHeight: 250,
                 overflowY: 'auto',
               }}
             >
@@ -370,39 +372,40 @@ function App() {
       <AppBar position="static">
         <Toolbar>
           <Box sx={{ flexGrow: 1 }}>
-            <Typography variant="h6" fontWeight={600}>
+            <Typography variant="subtitle1" fontWeight={600}>
               Gmail Receipt Manager
             </Typography>
-            <Typography variant="body2" sx={{ opacity: 0.8 }}>
-              View and classify email receipts
-            </Typography>
           </Box>
-          <ToggleButtonGroup
-            value={activeClassifier}
-            exclusive
-            onChange={handleClassifierChange}
-            size="small"
-            sx={{
-              bgcolor: 'rgba(255,255,255,0.15)',
-              '& .MuiToggleButton-root': {
-                color: 'rgba(255,255,255,0.7)',
-                borderColor: 'rgba(255,255,255,0.3)',
-                textTransform: 'none',
-                px: 2,
-                '&.Mui-selected': {
-                  color: '#fff',
-                  bgcolor: 'rgba(255,255,255,0.25)',
+          <Tooltip title="Choose classification engine">
+            <ToggleButtonGroup
+              value={activeClassifier}
+              exclusive
+              onChange={handleClassifierChange}
+              size="small"
+              sx={{
+                bgcolor: 'rgba(255,255,255,0.15)',
+                '& .MuiToggleButton-root': {
+                  color: 'rgba(255,255,255,0.7)',
+                  borderColor: 'rgba(255,255,255,0.3)',
+                  textTransform: 'none',
+                  px: 1.5,
+                  py: 0.25,
+                  fontSize: '0.8rem',
+                  '&.Mui-selected': {
+                    color: '#fff',
+                    bgcolor: 'rgba(255,255,255,0.25)',
+                  },
                 },
-              },
-            }}
-          >
-            <ToggleButton value="mock">Mock</ToggleButton>
-            <ToggleButton value="ollama">Ollama</ToggleButton>
-          </ToggleButtonGroup>
+              }}
+            >
+              <ToggleButton value="mock">Mock</ToggleButton>
+              <ToggleButton value="ollama">Ollama</ToggleButton>
+            </ToggleButtonGroup>
+          </Tooltip>
         </Toolbar>
       </AppBar>
 
-      <Container maxWidth="lg" sx={{ pt: 1.5, pb: 0, flexShrink: 0 }}>
+      <Container maxWidth="lg" sx={{ pt: 1, pb: 0, flexShrink: 0 }}>
         <StatsBar
           totalEmails={emails.length}
           totalReceipts={activeReceiptCount}
@@ -410,13 +413,14 @@ function App() {
           classifying={processingCount}
         />
         {error && (
-          <Alert severity="error" sx={{ mb: 1 }}>
+          <Alert severity="error" sx={{ mb: 0.5, py: 0 }}>
             {error}
           </Alert>
         )}
         <Tabs
           value={activeTab}
           onChange={(_, v) => setActiveTab(v)}
+          sx={{ minHeight: 40, '& .MuiTab-root': { minHeight: 40 } }}
         >
           <Tab label="All Emails" value="all" />
           <Tab label="Receipts Only" value="receipts" />
@@ -425,14 +429,14 @@ function App() {
 
       <Container maxWidth="lg" sx={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column', pb: 0 }}>
         {loading ? (
-          <Box sx={{ textAlign: 'center', py: 6 }}>
-            <CircularProgress />
-            <Typography sx={{ mt: 2 }} color="text.secondary">
+          <Box sx={{ textAlign: 'center', py: 4 }}>
+            <CircularProgress size={28} />
+            <Typography variant="body2" sx={{ mt: 1 }} color="text.secondary">
               Loading emails...
             </Typography>
           </Box>
         ) : displayedEmails.length === 0 ? (
-          <Box sx={{ textAlign: 'center', py: 6 }}>
+          <Box sx={{ textAlign: 'center', py: 4 }}>
             <Typography color="text.secondary">
               {activeTab === 'receipts' ? 'No receipts found.' : 'No emails found.'}
             </Typography>
@@ -442,10 +446,17 @@ function App() {
             <Table sx={{ tableLayout: 'fixed' }}>
               <TableHead>
                 <TableRow>
-                  <TableCell sx={{ fontWeight: 600, width: 140 }}>Date</TableCell>
-                  <TableCell sx={{ fontWeight: 600, width: 220 }}>From</TableCell>
+                  <TableCell sx={{ fontWeight: 600, width: 110 }}>Date</TableCell>
+                  <TableCell sx={{ fontWeight: 600, width: 190 }}>From</TableCell>
                   <TableCell sx={{ fontWeight: 600 }}>Subject</TableCell>
-                  <TableCell sx={{ fontWeight: 600, textAlign: 'center', width: 110 }}>Receipt?</TableCell>
+                  <TableCell sx={{ width: 36 }} />
+                  <Tooltip title="Is this email a receipt?">
+                    <TableCell sx={{ fontWeight: 600, textAlign: 'center', width: 100 }}>Receipt?</TableCell>
+                  </Tooltip>
+                  <Tooltip title="Classification confidence">
+                    <TableCell sx={{ fontWeight: 600, textAlign: 'center', width: 55 }}>Conf.</TableCell>
+                  </Tooltip>
+                  <TableCell sx={{ width: 44 }} />
                 </TableRow>
               </TableHead>
             </Table>
@@ -459,11 +470,11 @@ function App() {
                       <EmailTableRow
                         key={email.id}
                         email={email}
-                        isExpanded={isExpanded}
+                        contentOpen={isExpanded}
                         status={status}
                         errorMsg={errorMsg}
                         receipt={receiptByEmailId.get(email.id)}
-                        onToggle={() =>
+                        onToggleContent={() =>
                           setExpandedId((prev) => (prev === email.id ? null : email.id))
                         }
                         onReclassify={() => submitClassification([email.id], true)}
@@ -482,57 +493,111 @@ function App() {
 
 function EmailTableRow({
   email,
-  isExpanded,
+  contentOpen,
   status,
   errorMsg,
   receipt,
-  onToggle,
+  onToggleContent,
   onReclassify,
 }: {
   email: Email;
-  isExpanded: boolean;
+  contentOpen: boolean;
   status: EmailStatus;
   errorMsg?: string;
   receipt: Receipt | undefined;
-  onToggle: () => void;
+  onToggleContent: () => void;
   onReclassify: () => void;
 }) {
+  const [metaOpen, setMetaOpen] = useState(false);
+  const confidence = receipt?.classification?.confidence;
+  const highlighted = contentOpen || metaOpen;
   return (
     <>
       <TableRow
         hover
-        onClick={onToggle}
+        onClick={onToggleContent}
         sx={{
           cursor: 'pointer',
-          bgcolor: isExpanded ? '#f0f2ff' : undefined,
+          bgcolor: highlighted ? '#f0f2ff' : undefined,
         }}
       >
-        <TableCell sx={{ whiteSpace: 'nowrap', width: 140, color: 'text.secondary' }}>
+        <TableCell sx={{ whiteSpace: 'nowrap', width: 110, color: 'text.secondary' }}>
           {formatDate(email.date)}
         </TableCell>
-        <TableCell
-          sx={{ width: 220, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
-          title={email.from_address}
-        >
-          {formatFrom(email.from_address)}
+        <Tooltip title={email.from_address}>
+          <TableCell
+            sx={{ width: 190, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
+          >
+            {formatFrom(email.from_address)}
+          </TableCell>
+        </Tooltip>
+        <Tooltip title={email.subject}>
+          <TableCell
+            sx={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
+          >
+            {email.subject}
+          </TableCell>
+        </Tooltip>
+        <TableCell sx={{ width: 36, px: 0.5 }}>
+          <Tooltip title={metaOpen ? 'Hide metadata' : 'Show metadata (from, to, date)'}>
+            <IconButton
+              size="small"
+              onClick={(e) => {
+                e.stopPropagation();
+                setMetaOpen((prev) => !prev);
+              }}
+              sx={{ p: 0.25 }}
+            >
+              <ExpandMoreIcon
+                sx={{
+                  fontSize: '1.2rem',
+                  color: 'text.secondary',
+                  transition: 'transform 0.2s',
+                  transform: metaOpen ? 'rotate(180deg)' : 'rotate(0deg)',
+                }}
+              />
+            </IconButton>
+          </Tooltip>
         </TableCell>
-        <TableCell
-          sx={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
-          title={email.subject}
-        >
-          {email.subject}
-        </TableCell>
-        <TableCell sx={{ width: 110, textAlign: 'center' }}>
+        <TableCell sx={{ width: 100, textAlign: 'center', overflow: 'visible' }}>
           <StatusChip status={status} />
         </TableCell>
+        <TableCell sx={{ width: 55, textAlign: 'center' }}>
+          {confidence != null && (
+            <Tooltip title={`Classification confidence: ${(confidence * 100).toFixed(0)}%`}>
+              <Typography variant="body2" component="span" sx={{ fontSize: '0.8rem', color: 'text.secondary' }}>
+                {(confidence * 100).toFixed(0)}%
+              </Typography>
+            </Tooltip>
+          )}
+        </TableCell>
+        <TableCell sx={{ width: 44, px: 0.5 }}>
+          <Tooltip title="Re-classify this email">
+            <span>
+              <IconButton
+                size="small"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onReclassify();
+                }}
+                disabled={status === 'pending' || status === 'classifying'}
+                sx={{ p: 0.5 }}
+              >
+                <RefreshIcon sx={{ fontSize: '1rem' }} />
+              </IconButton>
+            </span>
+          </Tooltip>
+        </TableCell>
       </TableRow>
-      {isExpanded && (
-        <EmailExpandedRow
+      {metaOpen && (
+        <MetadataRow email={email} receipt={receipt} />
+      )}
+      {contentOpen && (
+        <ContentRow
           email={email}
           receipt={receipt}
           status={status}
           errorMsg={errorMsg}
-          onReclassify={onReclassify}
         />
       )}
     </>
