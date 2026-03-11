@@ -15,39 +15,29 @@ from app.models import ClassificationResult, Email
 
 logger = logging.getLogger(__name__)
 
-PROMPT_TEMPLATE = """Classify this email: is it a financial transaction document?
+PROMPT_TEMPLATE = """You are a JSON-only classifier. You MUST reply with a single valid JSON object and nothing else. No text before or after the JSON.
 
-Answer "true" for ANY of these:
-- Receipt or proof of payment
-- Invoice or bill
-- Order confirmation with a price
-- Subscription charge or renewal
-- Bank/credit card transaction alert
-- Taxi, ride, delivery, or travel booking confirmation with a charge
-- Donation receipt
-- Refund notification
-- Utility bill (electricity, water, internet, phone)
-- Government fee or tax payment
+Task: decide whether this email is a financial transaction document.
 
-Answer "false" for:
-- Newsletters, marketing, promotions
-- Shipping/delivery status updates (no price)
-- Account notifications (password reset, login alert)
-- Personal or work conversations
-- Social media notifications
+"is_receipt" must be true for: receipts, invoices, bills, order confirmations with a price, subscription charges, bank/credit card alerts, taxi/ride/delivery/travel confirmations with a charge, donation receipts, refund notifications, utility bills, government fees.
 
-The email may be in ANY language (English, Hebrew, German, Bulgarian, Norwegian, etc.).
+"is_receipt" must be false for: newsletters, marketing, promotions, shipping updates without price, account notifications, personal conversations, social media notifications.
 
-Hints:
-{hints}
+"confidence" must be a decimal number between 0.0 and 1.0 (e.g. 0.85). 1.0 means absolutely certain, 0.5 means unsure.
+
+"reason" must be a short string, max 15 words.
+
+The email may be in ANY language.
+
+Hints: {hints}
 
 From: {from_}
 Subject: {subject}
 Attachments: {attachments}
 Body: {body_preview}
 
-Reply with ONLY this JSON (confidence is 0.0-1.0 where 1.0 = absolutely certain):
-{{"is_receipt": true, "confidence": 0.95, "reason": "max 15 words"}}"""
+Reply with ONLY valid JSON, exactly like this example:
+{{"is_receipt": true, "confidence": 0.85, "reason": "order confirmation with total price"}}"""
 
 MONEY_RE = re.compile(
     r"[₪$€]\s*\d|(?:ILS|USD|EUR)\s*\d|\d\s*[₪$€]|\d\s*(?:ILS|USD|EUR)"
@@ -70,18 +60,18 @@ def _get_hints(from_: str, subject: str, body: str) -> str:
 
 
 def _parse_llm_response(text: str) -> dict:
-    """Extract JSON from LLM response, with fallback parsing."""
+    """Parse JSON from LLM response. Raises ValueError on failure."""
     text = re.sub(r"```json\s*", "", text)
     text = re.sub(r"```\s*$", "", text)
 
     match = re.search(r"\{.*?\}", text, re.DOTALL)
-    if match:
-        try:
-            return json.loads(match.group())
-        except json.JSONDecodeError:
-            pass
+    if not match:
+        raise ValueError(f"No JSON object found in LLM response: {text!r}")
 
-    raise ValueError(f"Failed to parse LLM response as JSON: {text!r}")
+    try:
+        return json.loads(match.group())
+    except json.JSONDecodeError as e:
+        raise ValueError(f"Invalid JSON in LLM response: {text!r}") from e
 
 
 class OllamaClassifier:
