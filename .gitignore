@@ -8,3 +8,6 @@ classification_results.json
 __pycache__
 src/test_results.json
 src/test_raw_emails/
+backend/.venv/
+frontend/node_modules/
+frontend/dist/
