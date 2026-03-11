@@ -24,7 +24,7 @@ def _make_app(tmp_dir: str):
     import app.main as main_module
 
     main_module.store = ClassificationStore(Path(tmp_dir) / "classifications.json")
-    main_module.worker = ClassificationWorker(main_module.classifier, main_module.store)
+    main_module.worker = ClassificationWorker(main_module._classifiers[main_module._active_classifier], main_module.store)
     return main_module.app
 
 

@@ -19,6 +19,8 @@ import {
   TableRow,
   Tab,
   Tabs,
+  ToggleButton,
+  ToggleButtonGroup,
   Toolbar,
   Typography,
 } from '@mui/material';
@@ -26,8 +28,10 @@ import RefreshIcon from '@mui/icons-material/Refresh';
 import {
   classifyEmails,
   fetchClassifications,
+  fetchClassifier,
   fetchEmails,
   fetchReceipts,
+  setClassifier,
 } from './api';
 import type { Email, ProcessingEntry, Receipt } from './types';
 
@@ -219,6 +223,7 @@ function App() {
   const [submitted, setSubmitted] = useState<Set<string>>(new Set());
   const [activeTab, setActiveTab] = useState<TabValue>('all');
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [activeClassifier, setActiveClassifier] = useState<string>('mock');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -299,15 +304,40 @@ function App() {
     }
   }, [startPolling]);
 
+  const handleClassifierChange = useCallback(async (
+    _: React.MouseEvent<HTMLElement>,
+    value: string | null,
+  ) => {
+    if (!value || value === activeClassifier) return;
+    try {
+      stopPolling();
+      const result = await setClassifier(value);
+      setActiveClassifier(result.classifier);
+      if (result.changed) {
+        setReceipts([]);
+        setProcessing({});
+        setSubmitted(new Set());
+      }
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : 'Failed to switch classifier',
+      );
+    }
+  }, [activeClassifier, stopPolling]);
+
   useEffect(() => {
     async function loadData() {
       setLoading(true);
       setError(null);
       try {
-        const emailsData = await fetchEmails();
+        const [emailsData, receiptsData, classifier] = await Promise.all([
+          fetchEmails(),
+          fetchReceipts(),
+          fetchClassifier(),
+        ]);
         setEmails(emailsData);
-        const receiptsData = await fetchReceipts();
         setReceipts(receiptsData);
+        setActiveClassifier(classifier);
         const ids = emailsData.map((e) => e.id);
         await submitClassification(ids, false);
       } catch (err) {
@@ -339,7 +369,7 @@ function App() {
     <Box sx={{ height: '100vh', display: 'flex', flexDirection: 'column', bgcolor: '#f5f5f5' }}>
       <AppBar position="static">
         <Toolbar>
-          <Box>
+          <Box sx={{ flexGrow: 1 }}>
             <Typography variant="h6" fontWeight={600}>
               Gmail Receipt Manager
             </Typography>
@@ -347,6 +377,28 @@ function App() {
               View and classify email receipts
             </Typography>
           </Box>
+          <ToggleButtonGroup
+            value={activeClassifier}
+            exclusive
+            onChange={handleClassifierChange}
+            size="small"
+            sx={{
+              bgcolor: 'rgba(255,255,255,0.15)',
+              '& .MuiToggleButton-root': {
+                color: 'rgba(255,255,255,0.7)',
+                borderColor: 'rgba(255,255,255,0.3)',
+                textTransform: 'none',
+                px: 2,
+                '&.Mui-selected': {
+                  color: '#fff',
+                  bgcolor: 'rgba(255,255,255,0.25)',
+                },
+              },
+            }}
+          >
+            <ToggleButton value="mock">Mock</ToggleButton>
+            <ToggleButton value="ollama">Ollama</ToggleButton>
+          </ToggleButtonGroup>
         </Toolbar>
       </AppBar>
 

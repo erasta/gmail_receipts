@@ -1,3 +1,5 @@
+import os
+
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
@@ -6,6 +8,7 @@ from app.classification_store import ClassificationStore
 from app.classification_worker import ClassificationWorker
 from app.gmail_parser import parse_message
 from app.models import Email, Receipt
+from app.ollama_classifier import OllamaClassifier
 from mock_gmail.classifier import MockClassifier
 from mock_gmail.client import GmailApiError, MockGmailService
 
@@ -20,14 +23,23 @@ app.add_middleware(
 )
 
 gmail = MockGmailService()
-classifier = MockClassifier()
 store = ClassificationStore()
-worker = ClassificationWorker(classifier, store)
+
+_classifiers = {
+    "mock": MockClassifier(),
+    "ollama": OllamaClassifier(),
+}
+_active_classifier = os.environ.get("CLASSIFIER", "mock")
+worker = ClassificationWorker(_classifiers[_active_classifier], store)
 
 
 class ClassifyRequest(BaseModel):
     email_ids: list[str]
     force: bool = False
+
+
+class SetClassifierRequest(BaseModel):
+    classifier: str
 
 
 def _get_all_emails():
@@ -113,3 +125,25 @@ def list_receipts():
             classification=classification,
         ))
     return receipts
+
+
+@app.get("/api/classifier")
+def get_classifier():
+    return {"classifier": _active_classifier}
+
+
+@app.put("/api/classifier")
+def set_classifier(req: SetClassifierRequest):
+    """Switch classifier and clear all cached classifications."""
+    global _active_classifier, worker
+    if req.classifier not in _classifiers:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Unknown classifier: {req.classifier}. Valid: {list(_classifiers.keys())}",
+        )
+    if req.classifier == _active_classifier:
+        return {"classifier": _active_classifier, "changed": False}
+    _active_classifier = req.classifier
+    store.clear()
+    worker = ClassificationWorker(_classifiers[_active_classifier], store)
+    return {"classifier": _active_classifier, "changed": True}

@@ -31,3 +31,20 @@ export async function fetchClassifications(): Promise<Record<string, ProcessingE
   const res = await fetch('/api/classifications');
   return res.json();
 }
+
+export async function fetchClassifier(): Promise<string> {
+  const res = await fetch('/api/classifier');
+  const data = await res.json();
+  return data.classifier;
+}
+
+export async function setClassifier(
+  classifier: string,
+): Promise<{ classifier: string; changed: boolean }> {
+  const res = await fetch('/api/classifier', {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ classifier }),
+  });
+  return res.json();
+}
