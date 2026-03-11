@@ -122,4 +122,5 @@ class OllamaClassifier:
             is_receipt=parsed["is_receipt"],
             confidence=parsed["confidence"],
             reason=parsed["reason"],
+            raw_response=raw,
         )

@@ -18,6 +18,7 @@ class ClassificationResult(BaseModel):
     is_receipt: bool
     confidence: float
     reason: str
+    raw_response: str | None = None
 
 
 class Receipt(BaseModel):

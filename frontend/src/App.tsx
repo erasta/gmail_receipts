@@ -193,6 +193,22 @@ function ContentRow({
                 <strong>Reason:</strong> {receipt.classification.reason}
               </Typography>
             )}
+            {receipt?.classification?.raw_response && (
+              <Paper
+                variant="outlined"
+                sx={{
+                  p: 1,
+                  mb: 0.75,
+                  fontFamily: 'monospace',
+                  fontSize: '0.75rem',
+                  whiteSpace: 'pre-wrap',
+                  bgcolor: '#f5f5f5',
+                  color: '#555',
+                }}
+              >
+                <strong>LLM output:</strong> {receipt.classification.raw_response}
+              </Paper>
+            )}
             {status === 'error' && errorMsg && (
               <Typography variant="body2" color="error" fontStyle="italic" sx={{ mb: 0.75 }}>
                 {errorMsg}

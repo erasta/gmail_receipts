@@ -28,6 +28,7 @@ class ClassificationStore:
             is_receipt=entry["is_receipt"],
             confidence=entry["confidence"],
             reason=entry["reason"],
+            raw_response=entry.get("raw_response"),
         )
 
     def put(self, result: ClassificationResult) -> None:
@@ -35,6 +36,7 @@ class ClassificationStore:
             "is_receipt": result.is_receipt,
             "confidence": result.confidence,
             "reason": result.reason,
+            "raw_response": result.raw_response,
         }
         self._save()
 
@@ -54,6 +56,7 @@ class ClassificationStore:
                 is_receipt=entry["is_receipt"],
                 confidence=entry["confidence"],
                 reason=entry["reason"],
+                raw_response=entry.get("raw_response"),
             )
             for eid, entry in self._data.items()
         ]

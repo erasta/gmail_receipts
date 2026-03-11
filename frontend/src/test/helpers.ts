@@ -41,6 +41,7 @@ export const RECEIPTS: Receipt[] = RAW
       is_receipt: true,
       confidence: 1.0,
       reason: 'Mock classifier: looked up from test data',
+      raw_response: null,
     },
   }));
 

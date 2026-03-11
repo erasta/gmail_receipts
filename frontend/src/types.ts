@@ -14,6 +14,7 @@ export interface ClassificationResult {
   is_receipt: boolean;
   confidence: number;
   reason: string;
+  raw_response: string | null;
 }
 
 export interface Receipt {
