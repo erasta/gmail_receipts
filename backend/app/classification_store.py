@@ -38,6 +38,11 @@ class ClassificationStore:
         }
         self._save()
 
+    def delete(self, email_id: str) -> None:
+        if email_id in self._data:
+            del self._data[email_id]
+            self._save()
+
     def get_all(self) -> list[ClassificationResult]:
         return [
             ClassificationResult(
