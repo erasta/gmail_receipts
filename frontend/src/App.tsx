@@ -27,8 +27,11 @@ import {
 } from '@mui/material';
 import RefreshIcon from '@mui/icons-material/Refresh';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
+import RestartAltIcon from '@mui/icons-material/RestartAlt';
+import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import {
   classifyEmails,
+  clearClassifications,
   fetchClassifications,
   fetchClassifier,
   fetchEmails,
@@ -306,6 +309,27 @@ function App() {
     }
   }, [startPolling]);
 
+  const handleClearAll = useCallback(async () => {
+    try {
+      stopPolling();
+      await clearClassifications();
+      setReceipts([]);
+      setProcessing({});
+      setSubmitted(new Set());
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : 'Failed to clear classifications',
+      );
+    }
+  }, [stopPolling]);
+
+  const handleClassifyAll = useCallback(async () => {
+    const ids = emails.map((e) => e.id);
+    if (ids.length > 0) {
+      await submitClassification(ids, false);
+    }
+  }, [emails, submitClassification]);
+
   const handleClassifierChange = useCallback(async (
     _: React.MouseEvent<HTMLElement>,
     value: string | null,
@@ -401,6 +425,24 @@ function App() {
               <ToggleButton value="mock">Mock</ToggleButton>
               <ToggleButton value="ollama">Ollama</ToggleButton>
             </ToggleButtonGroup>
+          </Tooltip>
+          <Tooltip title="Reset all classifications">
+            <IconButton
+              onClick={handleClearAll}
+              sx={{ ml: 1, color: 'rgba(255,255,255,0.7)', '&:hover': { color: '#fff' } }}
+              size="small"
+            >
+              <RestartAltIcon />
+            </IconButton>
+          </Tooltip>
+          <Tooltip title="Classify all emails">
+            <IconButton
+              onClick={handleClassifyAll}
+              sx={{ ml: 0.5, color: 'rgba(255,255,255,0.7)', '&:hover': { color: '#fff' } }}
+              size="small"
+            >
+              <PlayArrowIcon />
+            </IconButton>
           </Tooltip>
         </Toolbar>
       </AppBar>

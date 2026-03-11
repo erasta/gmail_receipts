@@ -38,6 +38,10 @@ export async function fetchClassifier(): Promise<string> {
   return data.classifier;
 }
 
+export async function clearClassifications(): Promise<void> {
+  await fetch('/api/classifications', { method: 'DELETE' });
+}
+
 export async function setClassifier(
   classifier: string,
 ): Promise<{ classifier: string; changed: boolean }> {

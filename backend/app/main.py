@@ -154,6 +154,15 @@ def set_classifier(req: SetClassifierRequest):
     return {"classifier": _active_classifier, "changed": True}
 
 
+@app.delete("/api/classifications")
+def clear_classifications():
+    """Clear all cached classification results."""
+    global worker
+    store.clear()
+    worker = ClassificationWorker(_classifiers[_active_classifier], store)
+    return {"cleared": True}
+
+
 # --- Serve frontend static files (must be after all /api routes) ---
 if _FRONTEND_DIST.is_dir():
     app.mount("/assets", StaticFiles(directory=_FRONTEND_DIST / "assets"), name="static")
