@@ -46,8 +46,8 @@ Subject: {subject}
 Attachments: {attachments}
 Body: {body_preview}
 
-Reply with ONLY this JSON:
-{{"is_receipt": true, "confidence": 0.9, "reason": "max 15 words"}}"""
+Reply with ONLY this JSON (confidence is 0.0-1.0 where 1.0 = absolutely certain):
+{{"is_receipt": true, "confidence": 0.95, "reason": "max 15 words"}}"""
 
 MONEY_RE = re.compile(
     r"[₪$€]\s*\d|(?:ILS|USD|EUR)\s*\d|\d\s*[₪$€]|\d\s*(?:ILS|USD|EUR)"
@@ -81,14 +81,7 @@ def _parse_llm_response(text: str) -> dict:
         except json.JSONDecodeError:
             pass
 
-    is_receipt = bool(re.search(r'"is_receipt"\s*:\s*true', text, re.IGNORECASE))
-    conf_match = re.search(r'"confidence"\s*:\s*([\d.]+)', text)
-    reason_match = re.search(r'"reason"\s*:\s*"([^"]*)"', text)
-    return {
-        "is_receipt": is_receipt,
-        "confidence": float(conf_match.group(1)) if conf_match else 0.5,
-        "reason": reason_match.group(1) if reason_match else "parsed from malformed response",
-    }
+    raise ValueError(f"Failed to parse LLM response as JSON: {text!r}")
 
 
 class OllamaClassifier:
@@ -128,9 +121,15 @@ class OllamaClassifier:
         logger.debug("Ollama response for %s: %s", email.id, raw)
         parsed = _parse_llm_response(raw)
 
+        missing = [k for k in ("is_receipt", "confidence", "reason") if k not in parsed]
+        if missing:
+            raise ValueError(
+                f"LLM response missing required fields {missing}: {raw!r}"
+            )
+
         return ClassificationResult(
             email_id=email.id,
-            is_receipt=parsed.get("is_receipt", False),
-            confidence=parsed.get("confidence", 0.0),
-            reason=parsed.get("reason", ""),
+            is_receipt=parsed["is_receipt"],
+            confidence=parsed["confidence"],
+            reason=parsed["reason"],
         )

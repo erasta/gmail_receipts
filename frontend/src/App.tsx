@@ -77,7 +77,13 @@ const STATUS_TOOLTIP: Record<EmailStatus, string> = {
   error: 'Classification failed',
 };
 
-function StatusChip({ status }: { status: EmailStatus }) {
+function StatusChip({
+  status,
+  reason,
+}: {
+  status: EmailStatus;
+  reason?: string;
+}) {
   const config: Record<EmailStatus, {
     label: string;
     color: 'success' | 'default' | 'warning' | 'info' | 'error';
@@ -91,8 +97,11 @@ function StatusChip({ status }: { status: EmailStatus }) {
     error: { label: 'Error', color: 'error', variant: 'filled' },
   };
   const { label, color, variant } = config[status];
+  const tooltip = reason
+    ? `${STATUS_TOOLTIP[status]} — ${reason}`
+    : STATUS_TOOLTIP[status];
   return (
-    <Tooltip title={STATUS_TOOLTIP[status]}>
+    <Tooltip title={tooltip}>
       <Chip label={label} color={color} variant={variant} size="small" sx={{ maxWidth: 'none' }} />
     </Tooltip>
   );
@@ -291,21 +300,27 @@ function App() {
     ids: string[],
     force: boolean = false,
   ) => {
-    const report = await classifyEmails(ids, force);
-    setSubmitted((prev) => {
-      const next = new Set(prev);
-      ids.forEach((id) => next.add(id));
-      return next;
-    });
-    const newProcessing: Record<string, ProcessingEntry> = {};
-    for (const [id, status] of Object.entries(report)) {
-      if (status === 'queued' || status === 'already_processing') {
-        newProcessing[id] = { status: 'pending' };
+    try {
+      const report = await classifyEmails(ids, force);
+      setSubmitted((prev) => {
+        const next = new Set(prev);
+        ids.forEach((id) => next.add(id));
+        return next;
+      });
+      const newProcessing: Record<string, ProcessingEntry> = {};
+      for (const [id, status] of Object.entries(report)) {
+        if (status === 'queued' || status === 'already_processing') {
+          newProcessing[id] = { status: 'pending' };
+        }
       }
-    }
-    if (Object.keys(newProcessing).length > 0) {
-      setProcessing((prev) => ({ ...prev, ...newProcessing }));
-      startPolling();
+      if (Object.keys(newProcessing).length > 0) {
+        setProcessing((prev) => ({ ...prev, ...newProcessing }));
+        startPolling();
+      }
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : 'Classification request failed',
+      );
     }
   }, [startPolling]);
 
@@ -552,6 +567,7 @@ function EmailTableRow({
 }) {
   const [metaOpen, setMetaOpen] = useState(false);
   const confidence = receipt?.classification?.confidence;
+  const reason = receipt?.classification?.reason;
   const highlighted = contentOpen || metaOpen;
   return (
     <>
@@ -602,11 +618,14 @@ function EmailTableRow({
           </Tooltip>
         </TableCell>
         <TableCell sx={{ width: 100, textAlign: 'center', overflow: 'visible' }}>
-          <StatusChip status={status} />
+          <StatusChip status={status} reason={reason} />
         </TableCell>
         <TableCell sx={{ width: 55, textAlign: 'center' }}>
           {confidence != null && (
-            <Tooltip title={`Classification confidence: ${(confidence * 100).toFixed(0)}%`}>
+            <Tooltip title={reason
+              ? `${(confidence * 100).toFixed(0)}% confidence — ${reason}`
+              : `Classification confidence: ${(confidence * 100).toFixed(0)}%`
+            }>
               <Typography variant="body2" component="span" sx={{ fontSize: '0.8rem', color: 'text.secondary' }}>
                 {(confidence * 100).toFixed(0)}%
               </Typography>
