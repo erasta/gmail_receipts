@@ -28,16 +28,19 @@ def test_all_json_emails_are_served_by_client():
 
 
 def test_message_content_matches_json():
-    """Headers and body of each fetched message should match emails.json."""
+    """Every field of each fetched message should match emails.json."""
     entries = _load_json()
     service = MockGmailService()
 
     for entry in entries:
-        msg = service.users().messages().get(userId="me", id=entry["id"]).execute()
+        eid = entry["id"]
+        msg = service.users().messages().get(userId="me", id=eid).execute()
 
-        assert get_header(msg, "From") == entry["from"]
-        assert get_header(msg, "Subject") == entry["subject"]
-        assert decode_body(msg) == entry["body"]
+        assert get_header(msg, "From") == entry["from"], f"{eid}: From mismatch"
+        assert get_header(msg, "Subject") == entry["subject"], f"{eid}: Subject mismatch"
+        assert get_header(msg, "To") == "user@gmail.com", f"{eid}: To mismatch"
+        assert decode_body(msg) == entry["body"], f"{eid}: body mismatch"
+        assert msg["labelIds"] == entry["labels"], f"{eid}: labels mismatch"
 
 
 def test_receipt_ids_match_json():
