@@ -96,14 +96,14 @@ function StatsBar({
     cards.push({ label: 'Classifying', value: classifying, color: '#1565c0' });
   }
   return (
-    <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
+    <Box sx={{ display: 'flex', gap: 1.5, mb: 1 }}>
       {cards.map((c) => (
         <Card key={c.label} sx={{ flex: 1 }}>
-          <CardContent sx={{ py: 1.5, '&:last-child': { pb: 1.5 } }}>
-            <Typography variant="overline" color="text.secondary">
+          <CardContent sx={{ py: 1, px: 1.5, '&:last-child': { pb: 1 } }}>
+            <Typography variant="caption" color="text.secondary" sx={{ textTransform: 'uppercase', letterSpacing: '0.05em' }}>
               {c.label}
             </Typography>
-            <Typography variant="h4" fontWeight={700} sx={{ color: c.color }}>
+            <Typography variant="h5" fontWeight={700} sx={{ color: c.color }}>
               {c.value}
             </Typography>
           </CardContent>
@@ -336,8 +336,8 @@ function App() {
       : emails;
 
   return (
-    <Box sx={{ minHeight: '100vh', bgcolor: '#f5f5f5' }}>
-      <AppBar position="sticky">
+    <Box sx={{ height: '100vh', display: 'flex', flexDirection: 'column', bgcolor: '#f5f5f5' }}>
+      <AppBar position="static">
         <Toolbar>
           <Box>
             <Typography variant="h6" fontWeight={600}>
@@ -350,31 +350,28 @@ function App() {
         </Toolbar>
       </AppBar>
 
-      <Container maxWidth="lg" sx={{ py: 3 }}>
-        <Box sx={{ position: 'sticky', top: 64, zIndex: 99, bgcolor: '#f5f5f5', pt: 0.5, pb: 1 }}>
-          <StatsBar
-            totalEmails={emails.length}
-            totalReceipts={activeReceiptCount}
-            totalNonReceipts={classifiedNonReceipts}
-            classifying={processingCount}
-          />
-        </Box>
-
+      <Container maxWidth="lg" sx={{ pt: 1.5, pb: 0, flexShrink: 0 }}>
+        <StatsBar
+          totalEmails={emails.length}
+          totalReceipts={activeReceiptCount}
+          totalNonReceipts={classifiedNonReceipts}
+          classifying={processingCount}
+        />
         {error && (
-          <Alert severity="error" sx={{ mb: 2 }}>
+          <Alert severity="error" sx={{ mb: 1 }}>
             {error}
           </Alert>
         )}
-
         <Tabs
           value={activeTab}
           onChange={(_, v) => setActiveTab(v)}
-          sx={{ mb: 2 }}
         >
           <Tab label="All Emails" value="all" />
           <Tab label="Receipts Only" value="receipts" />
         </Tabs>
+      </Container>
 
+      <Container maxWidth="lg" sx={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column', pb: 0 }}>
         {loading ? (
           <Box sx={{ textAlign: 'center', py: 6 }}>
             <CircularProgress />
@@ -389,38 +386,42 @@ function App() {
             </Typography>
           </Box>
         ) : (
-          <TableContainer component={Paper}>
-            <Table>
+          <Paper sx={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+            <Table sx={{ tableLayout: 'fixed' }}>
               <TableHead>
                 <TableRow>
-                  <TableCell sx={{ fontWeight: 600 }}>Date</TableCell>
-                  <TableCell sx={{ fontWeight: 600 }}>From</TableCell>
+                  <TableCell sx={{ fontWeight: 600, width: 140 }}>Date</TableCell>
+                  <TableCell sx={{ fontWeight: 600, width: 220 }}>From</TableCell>
                   <TableCell sx={{ fontWeight: 600 }}>Subject</TableCell>
-                  <TableCell sx={{ fontWeight: 600, textAlign: 'center' }}>Receipt?</TableCell>
+                  <TableCell sx={{ fontWeight: 600, textAlign: 'center', width: 110 }}>Receipt?</TableCell>
                 </TableRow>
               </TableHead>
-              <TableBody>
-                {displayedEmails.map((email) => {
-                  const isExpanded = expandedId === email.id;
-                  const { status, error: errorMsg } = getEmailStatus(email.id);
-                  return (
-                    <EmailTableRow
-                      key={email.id}
-                      email={email}
-                      isExpanded={isExpanded}
-                      status={status}
-                      errorMsg={errorMsg}
-                      receipt={receiptByEmailId.get(email.id)}
-                      onToggle={() =>
-                        setExpandedId((prev) => (prev === email.id ? null : email.id))
-                      }
-                      onReclassify={() => submitClassification([email.id], true)}
-                    />
-                  );
-                })}
-              </TableBody>
             </Table>
-          </TableContainer>
+            <TableContainer sx={{ flex: 1, overflowY: 'auto' }}>
+              <Table sx={{ tableLayout: 'fixed' }}>
+                <TableBody>
+                  {displayedEmails.map((email) => {
+                    const isExpanded = expandedId === email.id;
+                    const { status, error: errorMsg } = getEmailStatus(email.id);
+                    return (
+                      <EmailTableRow
+                        key={email.id}
+                        email={email}
+                        isExpanded={isExpanded}
+                        status={status}
+                        errorMsg={errorMsg}
+                        receipt={receiptByEmailId.get(email.id)}
+                        onToggle={() =>
+                          setExpandedId((prev) => (prev === email.id ? null : email.id))
+                        }
+                        onReclassify={() => submitClassification([email.id], true)}
+                      />
+                    );
+                  })}
+                </TableBody>
+              </Table>
+            </TableContainer>
+          </Paper>
         )}
       </Container>
     </Box>
@@ -458,13 +459,13 @@ function EmailTableRow({
           {formatDate(email.date)}
         </TableCell>
         <TableCell
-          sx={{ maxWidth: 220, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
+          sx={{ width: 220, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
           title={email.from_address}
         >
           {formatFrom(email.from_address)}
         </TableCell>
         <TableCell
-          sx={{ maxWidth: 400, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
+          sx={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
           title={email.subject}
         >
           {email.subject}
