@@ -47,6 +47,11 @@ def _get_email(email_id: str) -> Email | None:
         return None
 
 
+@app.get("/api/health")
+def health():
+    return {"status": "ok"}
+
+
 @app.get("/api/emails")
 def list_emails():
     return _get_all_emails()

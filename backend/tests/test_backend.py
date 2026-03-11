@@ -39,6 +39,17 @@ def _classify_and_wait(client: TestClient, email_ids: list[str], force: bool = F
     raise TimeoutError("Classification did not finish in time")
 
 
+# --- Health ---
+
+def test_health():
+    with TemporaryDirectory() as tmp:
+        app = _make_app(tmp)
+        client = TestClient(app)
+        res = client.get("/api/health")
+        assert res.status_code == 200
+        assert res.json() == {"status": "ok"}
+
+
 # --- Email endpoints ---
 
 def test_list_emails_returns_all():
@@ -95,6 +106,7 @@ def test_classify_queues_emails():
         report = res.json()
         for eid in ids:
             assert report[eid] == "queued"
+        _classify_and_wait(client, [])  # wait for queue to drain
 
 
 def test_classify_returns_cached_when_not_forced():
