@@ -1,8 +1,9 @@
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 
+from app.classification_store import ClassificationStore
 from app.gmail_parser import parse_message
-from app.models import Receipt
+from app.models import ClassificationResult, Email, Receipt
 from mock_gmail.classifier import MockClassifier
 from mock_gmail.client import GmailApiError, MockGmailService
 
@@ -18,6 +19,7 @@ app.add_middleware(
 
 gmail = MockGmailService()
 classifier = MockClassifier()
+store = ClassificationStore()
 
 
 def _get_all_emails():
@@ -37,11 +39,17 @@ def _get_email(email_id: str):
         return None
 
 
-def _to_receipt(email_id: str) -> Receipt | None:
-    email = _get_email(email_id)
-    if email is None:
-        return None
-    classification = classifier.classify(email)
+def _classify(email: Email) -> ClassificationResult:
+    cached = store.get(email.id)
+    if cached is not None:
+        return cached
+    result = classifier.classify(email)
+    store.put(result)
+    return result
+
+
+def _to_receipt(email: Email) -> Receipt | None:
+    classification = _classify(email)
     if not classification.is_receipt:
         return None
     return Receipt(
@@ -70,9 +78,7 @@ def read_email(email_id: str):
 def list_receipts():
     receipts: list[Receipt] = []
     for email in _get_all_emails():
-        receipt = _to_receipt(email.id)
+        receipt = _to_receipt(email)
         if receipt is not None:
             receipts.append(receipt)
     return receipts
-
-
