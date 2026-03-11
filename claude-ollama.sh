@@ -2,7 +2,7 @@
 set -e
 PROJECT_DIR="$(pwd)"
 PROJECT_SLUG="$(echo "$PROJECT_DIR" | sed 's/[^a-zA-Z0-9]/-/g')"
-IMAGE_NAME="claude-code-env"
+IMAGE_NAME="claude-code-env-ollama"
 
 mkdir -p "$HOME/.claude/projects/$PROJECT_SLUG"
 
@@ -11,7 +11,11 @@ docker build -t "$IMAGE_NAME" -f - "$PROJECT_DIR" <<'EOF'
 FROM node:22-bookworm
 
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends python3 python3-pip python3-venv \
+    && apt-get install -y --no-install-recommends \
+        python3 \
+        python3-pip \
+        python3-venv \
+        zstd \
     && rm -rf /var/lib/apt/lists/*
 
 # Install Ollama
