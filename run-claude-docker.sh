@@ -1,6 +1,6 @@
 #!/bin/bash
 set -e
-PROJECT_DIR="$(cd "$(dirname "$0")" && pwd)"
+PROJECT_DIR="$(pwd)"
 PROJECT_SLUG="$(echo "$PROJECT_DIR" | sed 's/[^a-zA-Z0-9]/-/g')"
 IMAGE_NAME="claude-code-env"
 
