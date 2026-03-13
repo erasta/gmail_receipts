@@ -4,16 +4,25 @@ Persists classifier output so emails are only classified once.
 """
 
 import json
+import os
 from pathlib import Path
 
 from app.models import ClassificationResult
 
-_DEFAULT_PATH = Path(__file__).parent.parent / "data" / "classifications.json"
+
+def _default_path() -> Path:
+    env = os.environ.get("CLASSIFICATIONS_PATH")
+    if env:
+        return Path(env)
+    return Path(__file__).parent.parent / "data" / "classifications.json"
 
 
 class ClassificationStore:
-    def __init__(self, path: Path = _DEFAULT_PATH):
+    def __init__(self, path: Path | None = None):
+        if path is None:
+            path = _default_path()
         self._path = path
+        self._path.parent.mkdir(parents=True, exist_ok=True)
         self._data: dict[str, dict] = {}
         if self._path.exists():
             with open(self._path, encoding="utf-8") as f:

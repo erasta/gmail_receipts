@@ -55,3 +55,13 @@ src/.venv/bin/python src/extract.py                       # extract
 ```bash
 cd src && claude
 ```
+
+### Docker shell
+
+`docker-shell.sh` connects to the running Claude container. With no arguments it opens an interactive shell. With arguments it runs the command directly:
+
+```bash
+./docker-shell.sh                  # interactive shell
+./docker-shell.sh ./test.sh        # run all tests
+./docker-shell.sh bash -c "..."    # run arbitrary command
+```

@@ -1,6 +1,11 @@
 #!/bin/bash
 set -e
 CONTAINER_NAME="claude-$(basename "$(pwd)")"
+
+if [ $# -gt 0 ]; then
+  exec docker exec -it "$CONTAINER_NAME" "$@"
+fi
+
 echo "Connecting to container: $CONTAINER_NAME"
 echo ""
 exec docker exec -it "$CONTAINER_NAME" bash -c '
