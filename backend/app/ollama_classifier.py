@@ -8,6 +8,9 @@ import json
 import logging
 import os
 import re
+import shutil
+import subprocess
+import time
 
 import requests
 
@@ -74,6 +77,48 @@ def _parse_llm_response(text: str) -> dict:
         raise ValueError(f"Invalid JSON in LLM response: {text!r}") from e
 
 
+def _ensure_ollama_running(url: str, model: str) -> None:
+    """Start the Ollama server if it isn't reachable, then pull the model if needed."""
+    try:
+        requests.get(f"{url}/api/tags", timeout=3)
+        return
+    except requests.ConnectionError:
+        pass
+
+    if not shutil.which("ollama"):
+        raise RuntimeError("ollama binary not found in PATH")
+
+    logger.info("Ollama not running — starting ollama serve")
+    subprocess.Popen(
+        ["ollama", "serve"],
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+    )
+
+    for _ in range(30):
+        time.sleep(1)
+        try:
+            requests.get(f"{url}/api/tags", timeout=3)
+            break
+        except requests.ConnectionError:
+            continue
+    else:
+        raise RuntimeError("Ollama server did not start within 30 seconds")
+
+    logger.info("Ollama is up — checking model %s", model)
+    tags = requests.get(f"{url}/api/tags", timeout=5).json()
+    installed = {m["name"].split(":")[0] for m in tags.get("models", [])}
+    if model.split(":")[0] not in installed:
+        logger.info("Pulling model %s (this may take a while)", model)
+        resp = requests.post(
+            f"{url}/api/pull",
+            json={"name": model, "stream": False},
+            timeout=600,
+        )
+        resp.raise_for_status()
+        logger.info("Model %s pulled successfully", model)
+
+
 class OllamaClassifier:
     def __init__(
         self,
@@ -87,8 +132,16 @@ class OllamaClassifier:
         )
         self._model = model or os.environ.get("OLLAMA_MODEL", "phi3.5")
         self._body_max_words = body_max_words
+        self._started = False
+
+    def _ensure_server(self) -> None:
+        if self._started:
+            return
+        _ensure_ollama_running(self._ollama_url, self._model)
+        self._started = True
 
     def classify(self, email: Email) -> ClassificationResult:
+        self._ensure_server()
         body_preview = " ".join(email.body_text.split()[: self._body_max_words])
         hints = _get_hints(email.from_address, email.subject, body_preview)
 

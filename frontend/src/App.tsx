@@ -365,13 +365,23 @@ function App() {
                   fontSize: '0.8rem',
                   '&.Mui-selected': {
                     color: '#fff',
-                    bgcolor: 'rgba(255,255,255,0.25)',
+                    fontWeight: 700,
                   },
                 },
               }}
             >
-              <ToggleButton value="mock">Mock</ToggleButton>
-              <ToggleButton value="ollama">Ollama</ToggleButton>
+              <ToggleButton
+                value="mock"
+                sx={{ '&.Mui-selected': { bgcolor: 'rgba(255,180,50,0.5)', '&:hover': { bgcolor: 'rgba(255,180,50,0.65)' } } }}
+              >
+                Mock
+              </ToggleButton>
+              <ToggleButton
+                value="ollama"
+                sx={{ '&.Mui-selected': { bgcolor: 'rgba(80,200,80,0.5)', '&:hover': { bgcolor: 'rgba(80,200,80,0.65)' } } }}
+              >
+                Ollama
+              </ToggleButton>
             </ToggleButtonGroup>
           </Tooltip>
           <Tooltip title="Auto-classify emails as they load">
