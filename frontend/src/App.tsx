@@ -53,8 +53,8 @@ function App() {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [activeClassifier, setActiveClassifier] = useState<string>('mock');
   const [autoClassify, setAutoClassify] = useState(true);
-  const [dateFrom, setDateFrom] = useState('');
-  const [dateTo, setDateTo] = useState('');
+  const [dateFrom, setDateFrom] = useState(() => new URLSearchParams(window.location.search).get('from') ?? '');
+  const [dateTo, setDateTo] = useState(() => new URLSearchParams(window.location.search).get('to') ?? '');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -223,6 +223,16 @@ function App() {
       );
     }
   }, [activeClassifier, stopPolling, dateParams.dateFrom, dateParams.dateTo]);
+
+  // Sync date filters to URL
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (dateFrom) params.set('from', dateFrom); else params.delete('from');
+    if (dateTo) params.set('to', dateTo); else params.delete('to');
+    const qs = params.toString();
+    const newUrl = qs ? `${window.location.pathname}?${qs}` : window.location.pathname;
+    window.history.replaceState(null, '', newUrl);
+  }, [dateFrom, dateTo]);
 
   useEffect(() => {
     async function loadData() {
