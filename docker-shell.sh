@@ -15,6 +15,6 @@ echo "Server commands:"
 echo "  cat /tmp/uvicorn.log          # view logs"
 echo "  tail -f /tmp/uvicorn.log      # follow logs"
 echo "  pkill -f uvicorn              # kill server"
-echo "  cd /home/eran/Code/gmail_receipts/backend && .venv/bin/python -m uvicorn app.main:app --host 0.0.0.0 --port 8000  # start foreground"
+echo "  backend/.venv/bin/python backend/app/main.py   # start foreground"
 echo ""
 exec bash'

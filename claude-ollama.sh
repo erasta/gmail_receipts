@@ -41,8 +41,8 @@ echo "==> Starting Claude (Ollama on internal port ${OLLAMA_PORT})..."
 exec docker run -it --rm \
   --name "claude-$(basename "$PROJECT_DIR")" \
   $GPU_FLAG \
-  -p 5173:5173 \
-  -p 8000:8000 \
+  -p 127.0.0.1:5173:5173 \
+  -p 127.0.0.1:8000:8000 \
   -v "$PROJECT_DIR":"$PROJECT_DIR" \
   -v "$HOME/.claude":/home/node/.claude \
   --tmpfs /home/node/.claude/projects:uid=1000,gid=1000 \

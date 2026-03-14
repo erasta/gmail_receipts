@@ -1,5 +1,10 @@
 import os
+import sys
 from pathlib import Path
+
+_BACKEND_DIR = Path(__file__).resolve().parent.parent
+if str(_BACKEND_DIR) not in sys.path:
+    sys.path.insert(0, str(_BACKEND_DIR))
 
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
@@ -170,3 +175,10 @@ if _FRONTEND_DIST.is_dir():
     @app.get("/{full_path:path}")
     def serve_frontend(full_path: str):
         return FileResponse(_FRONTEND_DIST / "index.html")
+
+
+if __name__ == "__main__":
+    import uvicorn
+
+    os.chdir(_BACKEND_DIR)
+    uvicorn.run("app.main:app", host="0.0.0.0", port=8000)

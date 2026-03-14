@@ -36,8 +36,8 @@ echo "    Ollama:   internal port $OLLAMA_PORT"
 exec docker run -it --rm \
   --name "gmail-receipts" \
   $GPU_FLAG \
-  -p 5173:5173 \
-  -p 8000:8000 \
+  -p 127.0.0.1:5173:5173 \
+  -p 127.0.0.1:8000:8000 \
   -v "$PROJECT_DIR":/app \
   -v "$DATA_DIR":/data \
   -v "$HOME/.ollama/models":/home/node/.ollama/models:ro \
