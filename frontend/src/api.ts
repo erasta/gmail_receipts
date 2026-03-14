@@ -3,11 +3,18 @@ import type { PaginatedEmails, ProcessingEntry, Receipt } from './types';
 export async function fetchEmails({
   offset = 0,
   limit = 20,
+  dateFrom,
+  dateTo,
 }: {
   offset?: number;
   limit?: number;
+  dateFrom?: string;
+  dateTo?: string;
 } = {}): Promise<PaginatedEmails> {
-  const res = await fetch(`/api/emails?offset=${offset}&limit=${limit}`);
+  const params = new URLSearchParams({ offset: String(offset), limit: String(limit) });
+  if (dateFrom) params.set('date_from', dateFrom);
+  if (dateTo) params.set('date_to', dateTo);
+  const res = await fetch(`/api/emails?${params}`);
   return res.json();
 }
 

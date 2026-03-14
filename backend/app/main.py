@@ -6,6 +6,8 @@ _BACKEND_DIR = Path(__file__).resolve().parent.parent
 if str(_BACKEND_DIR) not in sys.path:
     sys.path.insert(0, str(_BACKEND_DIR))
 
+from datetime import date
+
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
@@ -75,8 +77,18 @@ def health():
 
 
 @app.get("/api/emails")
-def list_emails(offset: int = Query(0, ge=0), limit: int = Query(20, ge=1, le=100)):
+def list_emails(
+    offset: int = Query(0, ge=0),
+    limit: int = Query(20, ge=1, le=100),
+    date_from: date | None = Query(None),
+    date_to: date | None = Query(None),
+):
     all_emails = _get_all_emails()
+    all_emails.sort(key=lambda e: e.date, reverse=True)
+    if date_from:
+        all_emails = [e for e in all_emails if e.date.date() >= date_from]
+    if date_to:
+        all_emails = [e for e in all_emails if e.date.date() <= date_to]
     total = len(all_emails)
     page = all_emails[offset:offset + limit]
     return PaginatedEmails(

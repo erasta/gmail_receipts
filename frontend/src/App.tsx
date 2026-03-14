@@ -2,16 +2,14 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   AppBar,
   Box,
-  Card,
-  CardContent,
   Chip,
   CircularProgress,
-  Collapse,
   Container,
   Alert,
   IconButton,
   Paper,
   Table,
+  TextField,
   TableBody,
   TableCell,
   TableContainer,
@@ -25,8 +23,6 @@ import {
   Tooltip,
   Typography,
 } from '@mui/material';
-import RefreshIcon from '@mui/icons-material/Refresh';
-import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import RestartAltIcon from '@mui/icons-material/RestartAlt';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import {
@@ -39,212 +35,9 @@ import {
   setClassifier,
 } from './api';
 import type { Email, ProcessingEntry, Receipt } from './types';
-
-type TabValue = 'all' | 'receipts';
-
-type EmailStatus =
-  | 'unclassified'
-  | 'pending'
-  | 'classifying'
-  | 'receipt'
-  | 'not_receipt'
-  | 'error';
-
-function formatDate(dateStr: string): string {
-  try {
-    return new Date(dateStr).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-    });
-  } catch {
-    return dateStr;
-  }
-}
-
-function formatFrom(from: string): string {
-  const match = from.match(/^"?([^"<]+)"?\s*</);
-  if (match) return match[1].trim();
-  return from;
-}
-
-const STATUS_TOOLTIP: Record<EmailStatus, string> = {
-  unclassified: 'Not yet classified',
-  pending: 'Waiting in queue',
-  classifying: 'Classification in progress',
-  receipt: 'Classified as a receipt',
-  not_receipt: 'Classified as not a receipt',
-  error: 'Classification failed',
-};
-
-function StatusChip({
-  status,
-  reason,
-}: {
-  status: EmailStatus;
-  reason?: string;
-}) {
-  const config: Record<EmailStatus, {
-    label: string;
-    color: 'success' | 'default' | 'warning' | 'info' | 'error';
-    variant: 'filled' | 'outlined';
-  }> = {
-    unclassified: { label: '\u2014', color: 'default', variant: 'outlined' },
-    pending: { label: 'Pending', color: 'warning', variant: 'outlined' },
-    classifying: { label: 'Classifying', color: 'info', variant: 'filled' },
-    receipt: { label: 'Yes', color: 'success', variant: 'filled' },
-    not_receipt: { label: 'No', color: 'default', variant: 'filled' },
-    error: { label: 'Error', color: 'error', variant: 'filled' },
-  };
-  const { label, color, variant } = config[status];
-  const tooltip = reason
-    ? `${STATUS_TOOLTIP[status]} — ${reason}`
-    : STATUS_TOOLTIP[status];
-  return (
-    <Tooltip title={tooltip}>
-      <Chip label={label} color={color} variant={variant} size="small" sx={{ maxWidth: 'none' }} />
-    </Tooltip>
-  );
-}
-
-function StatsBar({
-  totalEmails,
-  totalReceipts,
-  totalNonReceipts,
-  classifying,
-}: {
-  totalEmails: number;
-  totalReceipts: number;
-  totalNonReceipts: number;
-  classifying: number;
-}) {
-  const cards = [
-    { label: 'Total Emails', value: totalEmails, color: '#1a237e', tooltip: 'Total number of emails loaded' },
-    { label: 'Receipts', value: totalReceipts, color: '#2e7d32', tooltip: 'Emails classified as receipts' },
-    { label: 'Non-Receipts', value: totalNonReceipts, color: '#757575', tooltip: 'Emails classified as non-receipts' },
-  ];
-  if (classifying > 0) {
-    cards.push({ label: 'Classifying', value: classifying, color: '#1565c0', tooltip: 'Emails currently being classified' });
-  }
-  return (
-    <Box sx={{ display: 'flex', gap: 1, mb: 1 }}>
-      {cards.map((c) => (
-        <Tooltip key={c.label} title={c.tooltip}>
-          <Card sx={{ flex: 1 }}>
-            <CardContent sx={{ py: 0.75, px: 1.5, '&:last-child': { pb: 0.75 } }}>
-              <Typography variant="caption" color="text.secondary" sx={{ textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                {c.label}
-              </Typography>
-              <Typography variant="h6" fontWeight={700} sx={{ color: c.color }}>
-                {c.value}
-              </Typography>
-            </CardContent>
-          </Card>
-        </Tooltip>
-      ))}
-    </Box>
-  );
-}
-
-function MetadataRow({
-  email,
-  receipt,
-}: {
-  email: Email;
-  receipt: Receipt | undefined;
-}) {
-  return (
-    <TableRow>
-      <TableCell colSpan={7} sx={{ py: 0, px: 0 }}>
-        <Collapse in>
-          <Box sx={{ px: 2, py: 1, bgcolor: '#f5f6fa', borderBottom: '1px solid #e0e0e0' }}>
-            <Box sx={{ display: 'flex', gap: 2.5, fontSize: '0.82rem', color: 'text.secondary', flexWrap: 'wrap' }}>
-              <span><strong>From:</strong> {email.from_address}</span>
-              <span><strong>To:</strong> {email.to_address}</span>
-              <span><strong>Date:</strong> {email.date}</span>
-              {receipt?.vendor && <span><strong>Vendor:</strong> {receipt.vendor}</span>}
-              {receipt?.amount && <span><strong>Amount:</strong> {receipt.currency ?? ''}{receipt.amount}</span>}
-            </Box>
-          </Box>
-        </Collapse>
-      </TableCell>
-    </TableRow>
-  );
-}
-
-function ContentRow({
-  email,
-  receipt,
-  status,
-  errorMsg,
-}: {
-  email: Email;
-  receipt: Receipt | undefined;
-  status: EmailStatus;
-  errorMsg?: string;
-}) {
-  return (
-    <TableRow>
-      <TableCell colSpan={7} sx={{ py: 0, px: 0 }}>
-        <Collapse in>
-          <Box sx={{ px: 2, py: 1.5, bgcolor: '#fafbff', borderBottom: '2px solid #e8eaf6' }}>
-            {receipt?.classification?.reason && (
-              <Typography variant="body2" color="text.secondary" fontStyle="italic" sx={{ mb: 0.75 }}>
-                <strong>Reason:</strong> {receipt.classification.reason}
-              </Typography>
-            )}
-            {receipt?.classification?.raw_response && (
-              <Paper
-                variant="outlined"
-                sx={{
-                  p: 1,
-                  mb: 0.75,
-                  fontFamily: 'monospace',
-                  fontSize: '0.75rem',
-                  whiteSpace: 'pre-wrap',
-                  bgcolor: '#f5f5f5',
-                  color: '#555',
-                }}
-              >
-                <strong>LLM output:</strong> {receipt.classification.raw_response}
-              </Paper>
-            )}
-            {status === 'error' && errorMsg && (
-              <Typography variant="body2" color="error" fontStyle="italic" sx={{ mb: 0.75 }}>
-                {errorMsg}
-              </Typography>
-            )}
-
-            {email.attachments.length > 0 && (
-              <Box sx={{ mb: 0.75, fontSize: '0.8rem', color: 'text.secondary' }}>
-                <strong>Attachments: </strong>
-                {email.attachments.map((a, i) => (
-                  <Chip key={i} label={a} size="small" sx={{ mr: 0.5 }} />
-                ))}
-              </Box>
-            )}
-
-            <Paper
-              variant="outlined"
-              sx={{
-                p: 1.5,
-                whiteSpace: 'pre-wrap',
-                fontFamily: 'inherit',
-                fontSize: '0.82rem',
-                lineHeight: 1.5,
-                color: '#444',
-                maxHeight: 250,
-                overflowY: 'auto',
-              }}
-            >
-              {email.body_text || '(no text content)'}
-            </Paper>
-          </Box>
-        </Collapse>
-      </TableCell>
-    </TableRow>
-  );
-}
+import type { EmailStatus, TabValue } from './email-status';
+import { StatsBar } from './StatsBar';
+import { EmailTableRow } from './EmailTableRow';
 
 const PAGE_SIZE = 20;
 
@@ -260,6 +53,8 @@ function App() {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [activeClassifier, setActiveClassifier] = useState<string>('mock');
   const [autoClassify, setAutoClassify] = useState(true);
+  const [dateFrom, setDateFrom] = useState('');
+  const [dateTo, setDateTo] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -348,11 +143,13 @@ function App() {
     }
   }, [startPolling]);
 
+  const dateParams = { dateFrom: dateFrom || undefined, dateTo: dateTo || undefined };
+
   const loadMoreEmails = useCallback(async () => {
     if (loadingMore || !emailsHasMore) return;
     setLoadingMore(true);
     try {
-      const result = await fetchEmails({ offset: emails.length, limit: PAGE_SIZE });
+      const result = await fetchEmails({ offset: emails.length, limit: PAGE_SIZE, ...dateParams });
       setEmails(prev => [...prev, ...result.items]);
       setEmailsTotal(result.total);
       setEmailsHasMore(result.has_more);
@@ -367,7 +164,7 @@ function App() {
     } finally {
       setLoadingMore(false);
     }
-  }, [emails.length, loadingMore, emailsHasMore, autoClassify, submitClassification]);
+  }, [emails.length, loadingMore, emailsHasMore, autoClassify, submitClassification, dateParams.dateFrom, dateParams.dateTo]);
 
   const handleClearAll = useCallback(async () => {
     try {
@@ -380,7 +177,7 @@ function App() {
       setReceipts([]);
       setProcessing({});
       setSubmitted(new Set());
-      const result = await fetchEmails({ offset: 0, limit: PAGE_SIZE });
+      const result = await fetchEmails({ offset: 0, limit: PAGE_SIZE, ...dateParams });
       setEmails(result.items);
       setEmailsTotal(result.total);
       setEmailsHasMore(result.has_more);
@@ -389,7 +186,7 @@ function App() {
         err instanceof Error ? err.message : 'Failed to clear classifications',
       );
     }
-  }, [stopPolling]);
+  }, [stopPolling, dateParams.dateFrom, dateParams.dateTo]);
 
   const handleClassifyAll = useCallback(async () => {
     const ids = emails.map((e) => e.id);
@@ -415,7 +212,7 @@ function App() {
         setReceipts([]);
         setProcessing({});
         setSubmitted(new Set());
-        const res = await fetchEmails({ offset: 0, limit: PAGE_SIZE });
+        const res = await fetchEmails({ offset: 0, limit: PAGE_SIZE, ...dateParams });
         setEmails(res.items);
         setEmailsTotal(res.total);
         setEmailsHasMore(res.has_more);
@@ -425,7 +222,7 @@ function App() {
         err instanceof Error ? err.message : 'Failed to switch classifier',
       );
     }
-  }, [activeClassifier, stopPolling]);
+  }, [activeClassifier, stopPolling, dateParams.dateFrom, dateParams.dateTo]);
 
   useEffect(() => {
     async function loadData() {
@@ -433,7 +230,7 @@ function App() {
       setError(null);
       try {
         const [emailsResult, receiptsData, classifier] = await Promise.all([
-          fetchEmails({ offset: 0, limit: PAGE_SIZE }),
+          fetchEmails({ offset: 0, limit: PAGE_SIZE, ...dateParams }),
           fetchReceipts(),
           fetchClassifier(),
         ]);
@@ -457,6 +254,36 @@ function App() {
     loadData();
     return () => stopPolling();
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Reload emails when date filters change
+  const isInitialMount = useRef(true);
+  useEffect(() => {
+    if (isInitialMount.current) {
+      isInitialMount.current = false;
+      return;
+    }
+    async function reload() {
+      setLoading(true);
+      setError(null);
+      try {
+        setEmails([]);
+        setEmailsTotal(0);
+        setEmailsHasMore(true);
+        const result = await fetchEmails({ offset: 0, limit: PAGE_SIZE, ...dateParams });
+        setEmails(result.items);
+        setEmailsTotal(result.total);
+        setEmailsHasMore(result.has_more);
+        if (autoClassify && result.items.length > 0) {
+          await submitClassification(result.items.map(e => e.id), false);
+        }
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Failed to load emails');
+      } finally {
+        setLoading(false);
+      }
+    }
+    reload();
+  }, [dateFrom, dateTo]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (!autoClassify || emails.length === 0) return;
@@ -583,6 +410,34 @@ function App() {
           totalNonReceipts={classifiedNonReceipts}
           classifying={processingCount}
         />
+        <Box sx={{ display: 'flex', gap: 1.5, mb: 1, alignItems: 'center' }}>
+          <TextField
+            label="From"
+            type="date"
+            size="small"
+            value={dateFrom}
+            onChange={(e) => setDateFrom(e.target.value)}
+            slotProps={{ inputLabel: { shrink: true } }}
+            sx={{ width: 170 }}
+          />
+          <TextField
+            label="To"
+            type="date"
+            size="small"
+            value={dateTo}
+            onChange={(e) => setDateTo(e.target.value)}
+            slotProps={{ inputLabel: { shrink: true } }}
+            sx={{ width: 170 }}
+          />
+          {(dateFrom || dateTo) && (
+            <Chip
+              label="Clear dates"
+              size="small"
+              onDelete={() => { setDateFrom(''); setDateTo(''); }}
+              sx={{ ml: 0.5 }}
+            />
+          )}
+        </Box>
         {error && (
           <Alert severity="error" sx={{ mb: 0.5, py: 0 }}>
             {error}
@@ -664,123 +519,6 @@ function App() {
         )}
       </Container>
     </Box>
-  );
-}
-
-function EmailTableRow({
-  email,
-  contentOpen,
-  status,
-  errorMsg,
-  receipt,
-  onToggleContent,
-  onReclassify,
-}: {
-  email: Email;
-  contentOpen: boolean;
-  status: EmailStatus;
-  errorMsg?: string;
-  receipt: Receipt | undefined;
-  onToggleContent: () => void;
-  onReclassify: () => void;
-}) {
-  const [metaOpen, setMetaOpen] = useState(false);
-  const confidence = receipt?.classification?.confidence;
-  const reason = receipt?.classification?.reason;
-  const highlighted = contentOpen || metaOpen;
-  return (
-    <>
-      <TableRow
-        hover
-        onClick={onToggleContent}
-        sx={{
-          cursor: 'pointer',
-          bgcolor: highlighted ? '#f0f2ff' : undefined,
-        }}
-      >
-        <TableCell sx={{ whiteSpace: 'nowrap', width: 110, color: 'text.secondary' }}>
-          {formatDate(email.date)}
-        </TableCell>
-        <Tooltip title={email.from_address}>
-          <TableCell
-            sx={{ width: 190, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
-          >
-            {formatFrom(email.from_address)}
-          </TableCell>
-        </Tooltip>
-        <Tooltip title={email.subject}>
-          <TableCell
-            sx={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
-          >
-            {email.subject}
-          </TableCell>
-        </Tooltip>
-        <TableCell sx={{ width: 36, px: 0.5 }}>
-          <Tooltip title={metaOpen ? 'Hide metadata' : 'Show metadata (from, to, date)'}>
-            <IconButton
-              size="small"
-              onClick={(e) => {
-                e.stopPropagation();
-                setMetaOpen((prev) => !prev);
-              }}
-              sx={{ p: 0.25 }}
-            >
-              <ExpandMoreIcon
-                sx={{
-                  fontSize: '1.2rem',
-                  color: 'text.secondary',
-                  transition: 'transform 0.2s',
-                  transform: metaOpen ? 'rotate(180deg)' : 'rotate(0deg)',
-                }}
-              />
-            </IconButton>
-          </Tooltip>
-        </TableCell>
-        <TableCell sx={{ width: 100, textAlign: 'center', overflow: 'visible' }}>
-          <StatusChip status={status} reason={reason} />
-        </TableCell>
-        <TableCell sx={{ width: 55, textAlign: 'center' }}>
-          {confidence != null && (
-            <Tooltip title={reason
-              ? `${(confidence * 100).toFixed(0)}% confidence — ${reason}`
-              : `Classification confidence: ${(confidence * 100).toFixed(0)}%`
-            }>
-              <Typography variant="body2" component="span" sx={{ fontSize: '0.8rem', color: 'text.secondary' }}>
-                {(confidence * 100).toFixed(0)}%
-              </Typography>
-            </Tooltip>
-          )}
-        </TableCell>
-        <TableCell sx={{ width: 44, px: 0.5 }}>
-          <Tooltip title="Re-classify this email">
-            <span>
-              <IconButton
-                size="small"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onReclassify();
-                }}
-                disabled={status === 'pending' || status === 'classifying'}
-                sx={{ p: 0.5 }}
-              >
-                <RefreshIcon sx={{ fontSize: '1rem' }} />
-              </IconButton>
-            </span>
-          </Tooltip>
-        </TableCell>
-      </TableRow>
-      {metaOpen && (
-        <MetadataRow email={email} receipt={receipt} />
-      )}
-      {contentOpen && (
-        <ContentRow
-          email={email}
-          receipt={receipt}
-          status={status}
-          errorMsg={errorMsg}
-        />
-      )}
-    </>
   );
 }
 
