@@ -28,6 +28,14 @@ export interface Receipt {
   classification: ClassificationResult;
 }
 
+export interface PaginatedEmails {
+  items: Email[];
+  total: number;
+  offset: number;
+  limit: number;
+  has_more: boolean;
+}
+
 export interface ProcessingEntry {
   status: 'pending' | 'classifying' | 'error';
   error?: string;

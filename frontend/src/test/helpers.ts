@@ -55,7 +55,13 @@ import * as api from '../api';
 export const mockApi = vi.mocked(api);
 
 export function setupDefaultMocks() {
-  mockApi.fetchEmails.mockResolvedValue(EMAILS);
+  mockApi.fetchEmails.mockResolvedValue({
+    items: EMAILS,
+    total: EMAILS.length,
+    offset: 0,
+    limit: EMAILS.length,
+    has_more: false,
+  });
   mockApi.fetchReceipts.mockResolvedValue(RECEIPTS);
   mockApi.fetchClassifications.mockResolvedValue({});
   mockApi.fetchClassifier.mockResolvedValue('mock');

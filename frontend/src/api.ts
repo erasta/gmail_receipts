@@ -1,7 +1,13 @@
-import type { Email, ProcessingEntry, Receipt } from './types';
+import type { PaginatedEmails, ProcessingEntry, Receipt } from './types';
 
-export async function fetchEmails(): Promise<Email[]> {
-  const res = await fetch('/api/emails');
+export async function fetchEmails({
+  offset = 0,
+  limit = 20,
+}: {
+  offset?: number;
+  limit?: number;
+} = {}): Promise<PaginatedEmails> {
+  const res = await fetch(`/api/emails?offset=${offset}&limit=${limit}`);
   return res.json();
 }
 

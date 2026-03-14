@@ -10,7 +10,9 @@ import {
   Container,
   Alert,
   IconButton,
+  FormControlLabel,
   Paper,
+  Switch,
   Table,
   TableBody,
   TableCell,
@@ -246,17 +248,25 @@ function ContentRow({
   );
 }
 
+const PAGE_SIZE = 20;
+
 function App() {
   const [emails, setEmails] = useState<Email[]>([]);
+  const [emailsTotal, setEmailsTotal] = useState(0);
+  const [emailsHasMore, setEmailsHasMore] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [receipts, setReceipts] = useState<Receipt[]>([]);
   const [processing, setProcessing] = useState<Record<string, ProcessingEntry>>({});
   const [submitted, setSubmitted] = useState<Set<string>>(new Set());
   const [activeTab, setActiveTab] = useState<TabValue>('all');
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [activeClassifier, setActiveClassifier] = useState<string>('mock');
+  const [autoClassify, setAutoClassify] = useState(true);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const sentinelRef = useRef<HTMLDivElement>(null);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
 
   const receiptIds = new Set(
     receipts
@@ -340,13 +350,42 @@ function App() {
     }
   }, [startPolling]);
 
+  const loadMoreEmails = useCallback(async () => {
+    if (loadingMore || !emailsHasMore) return;
+    setLoadingMore(true);
+    try {
+      const result = await fetchEmails({ offset: emails.length, limit: PAGE_SIZE });
+      setEmails(prev => [...prev, ...result.items]);
+      setEmailsTotal(result.total);
+      setEmailsHasMore(result.has_more);
+      if (autoClassify) {
+        const newIds = result.items.map(e => e.id);
+        if (newIds.length > 0) {
+          await submitClassification(newIds, false);
+        }
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to load more emails');
+    } finally {
+      setLoadingMore(false);
+    }
+  }, [emails.length, loadingMore, emailsHasMore, autoClassify, submitClassification]);
+
   const handleClearAll = useCallback(async () => {
     try {
       stopPolling();
+      setAutoClassify(false);
       await clearClassifications();
+      setEmails([]);
+      setEmailsTotal(0);
+      setEmailsHasMore(true);
       setReceipts([]);
       setProcessing({});
       setSubmitted(new Set());
+      const result = await fetchEmails({ offset: 0, limit: PAGE_SIZE });
+      setEmails(result.items);
+      setEmailsTotal(result.total);
+      setEmailsHasMore(result.has_more);
     } catch (err) {
       setError(
         err instanceof Error ? err.message : 'Failed to clear classifications',
@@ -371,9 +410,17 @@ function App() {
       const result = await setClassifier(value);
       setActiveClassifier(result.classifier);
       if (result.changed) {
+        setAutoClassify(false);
+        setEmails([]);
+        setEmailsTotal(0);
+        setEmailsHasMore(true);
         setReceipts([]);
         setProcessing({});
         setSubmitted(new Set());
+        const res = await fetchEmails({ offset: 0, limit: PAGE_SIZE });
+        setEmails(res.items);
+        setEmailsTotal(res.total);
+        setEmailsHasMore(res.has_more);
       }
     } catch (err) {
       setError(
@@ -387,15 +434,17 @@ function App() {
       setLoading(true);
       setError(null);
       try {
-        const [emailsData, receiptsData, classifier] = await Promise.all([
-          fetchEmails(),
+        const [emailsResult, receiptsData, classifier] = await Promise.all([
+          fetchEmails({ offset: 0, limit: PAGE_SIZE }),
           fetchReceipts(),
           fetchClassifier(),
         ]);
-        setEmails(emailsData);
+        setEmails(emailsResult.items);
+        setEmailsTotal(emailsResult.total);
+        setEmailsHasMore(emailsResult.has_more);
         setReceipts(receiptsData);
         setActiveClassifier(classifier);
-        const ids = emailsData.map((e) => e.id);
+        const ids = emailsResult.items.map((e) => e.id);
         await submitClassification(ids, false);
       } catch (err) {
         setError(
@@ -410,6 +459,39 @@ function App() {
     loadData();
     return () => stopPolling();
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    if (!autoClassify || emails.length === 0) return;
+    const unclassifiedIds = emails
+      .filter(e => !submitted.has(e.id) && !(e.id in processing))
+      .map(e => e.id);
+    if (unclassifiedIds.length > 0) {
+      submitClassification(unclassifiedIds, false);
+    }
+  }, [autoClassify]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const loadMoreRef = useRef(loadMoreEmails);
+  loadMoreRef.current = loadMoreEmails;
+
+  const sentinelCallbackRef = useCallback((node: HTMLDivElement | null) => {
+    sentinelRef.current = node;
+  }, []);
+
+  useEffect(() => {
+    const sentinel = sentinelRef.current;
+    const container = scrollContainerRef.current;
+    if (!sentinel || !container) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting) {
+          loadMoreRef.current();
+        }
+      },
+      { root: container, rootMargin: '200px', threshold: 0 },
+    );
+    observer.observe(sentinel);
+    return () => observer.disconnect();
+  }, [emailsHasMore, loading, emails.length]);
 
   const processingCount = Object.keys(processing).length;
   const activeReceiptCount = [...receiptIds].filter((id) => !(id in processing)).length;
@@ -457,6 +539,25 @@ function App() {
               <ToggleButton value="ollama">Ollama</ToggleButton>
             </ToggleButtonGroup>
           </Tooltip>
+          <Tooltip title="Auto-classify emails as they load">
+            <FormControlLabel
+              control={
+                <Switch
+                  checked={autoClassify}
+                  onChange={(_, checked) => setAutoClassify(checked)}
+                  size="small"
+                  sx={{ '& .MuiSwitch-thumb': { bgcolor: '#fff' } }}
+                />
+              }
+              label="Auto"
+              sx={{
+                ml: 1.5,
+                mr: 0,
+                color: 'rgba(255,255,255,0.7)',
+                '& .MuiFormControlLabel-label': { fontSize: '0.8rem' },
+              }}
+            />
+          </Tooltip>
           <Tooltip title="Reset all classifications">
             <IconButton
               onClick={handleClearAll}
@@ -480,7 +581,7 @@ function App() {
 
       <Container maxWidth="lg" sx={{ pt: 1, pb: 0, flexShrink: 0 }}>
         <StatsBar
-          totalEmails={emails.length}
+          totalEmails={emailsTotal}
           totalReceipts={activeReceiptCount}
           totalNonReceipts={classifiedNonReceipts}
           classifying={processingCount}
@@ -533,7 +634,7 @@ function App() {
                 </TableRow>
               </TableHead>
             </Table>
-            <TableContainer sx={{ flex: 1, overflowY: 'auto' }}>
+            <TableContainer ref={scrollContainerRef} sx={{ flex: 1, overflowY: 'auto' }}>
               <Table sx={{ tableLayout: 'fixed' }}>
                 <TableBody>
                   {displayedEmails.map((email) => {
@@ -556,6 +657,11 @@ function App() {
                   })}
                 </TableBody>
               </Table>
+              {emailsHasMore && (
+                <Box ref={sentinelCallbackRef} sx={{ textAlign: 'center', py: 2 }}>
+                  {loadingMore && <CircularProgress size={24} />}
+                </Box>
+              )}
             </TableContainer>
           </Paper>
         )}

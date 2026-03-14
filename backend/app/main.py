@@ -6,7 +6,7 @@ _BACKEND_DIR = Path(__file__).resolve().parent.parent
 if str(_BACKEND_DIR) not in sys.path:
     sys.path.insert(0, str(_BACKEND_DIR))
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
@@ -15,7 +15,7 @@ from pydantic import BaseModel
 from app.classification_store import ClassificationStore
 from app.classification_worker import ClassificationWorker
 from app.gmail_parser import parse_message
-from app.models import Email, Receipt
+from app.models import Email, PaginatedEmails, Receipt
 from app.ollama_classifier import OllamaClassifier
 from mock_gmail.classifier import MockClassifier
 from mock_gmail.client import GmailApiError, MockGmailService
@@ -75,8 +75,17 @@ def health():
 
 
 @app.get("/api/emails")
-def list_emails():
-    return _get_all_emails()
+def list_emails(offset: int = Query(0, ge=0), limit: int = Query(20, ge=1, le=100)):
+    all_emails = _get_all_emails()
+    total = len(all_emails)
+    page = all_emails[offset:offset + limit]
+    return PaginatedEmails(
+        items=page,
+        total=total,
+        offset=offset,
+        limit=limit,
+        has_more=offset + limit < total,
+    )
 
 
 @app.get("/api/emails/{email_id}")

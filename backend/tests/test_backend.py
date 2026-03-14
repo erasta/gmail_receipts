@@ -52,14 +52,47 @@ def test_health():
 
 # --- Email endpoints ---
 
-def test_list_emails_returns_all():
+def test_list_emails_returns_paginated():
+    entries = _load_json()
+    with TemporaryDirectory() as tmp:
+        app = _make_app(tmp)
+        client = TestClient(app)
+        res = client.get(f"/api/emails?limit={len(entries)}")
+        assert res.status_code == 200
+        data = res.json()
+        assert data["total"] == len(entries)
+        assert len(data["items"]) == len(entries)
+        assert data["has_more"] is False
+
+
+def test_list_emails_default_limit():
     entries = _load_json()
     with TemporaryDirectory() as tmp:
         app = _make_app(tmp)
         client = TestClient(app)
         res = client.get("/api/emails")
-        assert res.status_code == 200
-        assert len(res.json()) == len(entries)
+        data = res.json()
+        assert len(data["items"]) == min(20, len(entries))
+        assert data["total"] == len(entries)
+        assert data["offset"] == 0
+        assert data["limit"] == 20
+
+
+def test_list_emails_pagination():
+    entries = _load_json()
+    with TemporaryDirectory() as tmp:
+        app = _make_app(tmp)
+        client = TestClient(app)
+        res = client.get("/api/emails?offset=0&limit=5")
+        data = res.json()
+        assert len(data["items"]) == 5
+        assert data["total"] == len(entries)
+        assert data["has_more"] is True
+
+        res2 = client.get(f"/api/emails?offset=5&limit={len(entries)}")
+        data2 = res2.json()
+        assert len(data2["items"]) == len(entries) - 5
+        assert data2["has_more"] is False
 
 
 def test_list_emails_content_matches_json():
@@ -68,7 +101,7 @@ def test_list_emails_content_matches_json():
     with TemporaryDirectory() as tmp:
         app = _make_app(tmp)
         client = TestClient(app)
-        for email in client.get("/api/emails").json():
+        for email in client.get(f"/api/emails?limit={len(entries)}").json()["items"]:
             entry = entries_by_id[email["id"]]
             assert email["from_address"] == entry["from"]
             assert email["subject"] == entry["subject"]

@@ -196,5 +196,203 @@
     "body": "Pull request #42 has been merged into main.\nTitle: Fix login bug",
     "labels": ["INBOX", "CATEGORY_UPDATES"],
     "is_receipt": false
+  },
+  {
+    "id": "aabbcc0017",
+    "from": "noreply@netflix.com",
+    "subject": "Your Netflix payment receipt",
+    "date": "2025-07-15T04:00:00Z",
+    "body": "Payment confirmation\nNetflix Premium\nBilling period: Jul 15 - Aug 14, 2025\nAmount: $22.99\nPayment method: Visa •••• 4242",
+    "labels": ["INBOX", "CATEGORY_UPDATES"],
+    "is_receipt": true
+  },
+  {
+    "id": "aabbcc0018",
+    "from": "receipt@lyft.com",
+    "subject": "Your Lyft ride receipt - $12.30",
+    "date": "2025-08-10T19:45:00Z",
+    "body": "Lyft Ride Receipt\nDate: Aug 10, 2025\nPickup: Downtown Station\nDropoff: Airport Terminal 2\nFare: $9.80\nService fee: $1.50\nTip: $1.00\nTotal: $12.30",
+    "labels": ["INBOX", "CATEGORY_UPDATES"],
+    "is_receipt": true
+  },
+  {
+    "id": "aabbcc0019",
+    "from": "noreply@digitalocean.com",
+    "subject": "Your DigitalOcean invoice for August 2025",
+    "date": "2025-08-01T12:00:00Z",
+    "body": "Invoice #DO-2025-08-7890\nDroplet: ubuntu-prod (s-2vcpu-4gb)\nPeriod: Aug 1 - Aug 31, 2025\nAmount: $24.00\nPaid via credit card ending in 3456",
+    "labels": ["INBOX", "CATEGORY_UPDATES"],
+    "is_receipt": true
+  },
+  {
+    "id": "aabbcc001a",
+    "from": "noreply@steam.com",
+    "subject": "Thank you for your Steam purchase",
+    "date": "2025-06-28T21:00:00Z",
+    "body": "Steam Purchase Receipt\nGame: Hades II\nPrice: $29.99\nTax: $2.47\nTotal: $32.46\nPayment: Visa •••• 4242",
+    "labels": ["INBOX", "CATEGORY_UPDATES"],
+    "is_receipt": true
+  },
+  {
+    "id": "aabbcc001b",
+    "from": "factura@movistar.es",
+    "subject": "Tu factura de julio ya está disponible",
+    "date": "2025-07-05T08:30:00Z",
+    "body": "Estimado cliente,\nSu factura de julio 2025 ya está disponible.\nImporte: 45,90 €\nNúmero de contrato: ES-98765\nForma de pago: domiciliación bancaria",
+    "labels": ["INBOX", "CATEGORY_UPDATES"],
+    "is_receipt": true
+  },
+  {
+    "id": "aabbcc001c",
+    "from": "order@ikea.com",
+    "subject": "IKEA Order Confirmation #SE-2025-44321",
+    "date": "2025-05-22T14:10:00Z",
+    "body": "Order Confirmation\nKALLAX Shelf unit - $79.99\nMALM Desk - $199.00\nDelivery: $49.00\nTotal: $327.99\nEstimated delivery: Jun 1, 2025",
+    "labels": ["INBOX", "CATEGORY_UPDATES"],
+    "is_receipt": true
+  },
+  {
+    "id": "aabbcc001d",
+    "from": "noreply@airbnb.com",
+    "subject": "Receipt for your stay in Barcelona",
+    "date": "2025-09-10T10:00:00Z",
+    "body": "Booking confirmation & receipt\nCozy apartment in Gothic Quarter\nCheck-in: Sep 15, 2025\nCheck-out: Sep 19, 2025\n4 nights × €95/night = €380.00\nCleaning fee: €45.00\nService fee: €52.00\nTotal: €477.00",
+    "labels": ["INBOX", "CATEGORY_UPDATES"],
+    "is_receipt": true
+  },
+  {
+    "id": "aabbcc001e",
+    "from": "billing@openai.com",
+    "subject": "OpenAI API usage invoice - August 2025",
+    "date": "2025-09-01T06:00:00Z",
+    "body": "Invoice #OAI-2025-08-1234\nAPI usage for August 2025\nGPT-4o tokens: 2.4M\nAmount: $48.20\nPaid via credit card ending in 7890",
+    "labels": ["INBOX", "CATEGORY_UPDATES"],
+    "is_receipt": true
+  },
+  {
+    "id": "aabbcc001f",
+    "from": "kvitto@ica.se",
+    "subject": "Ditt kvitto från ICA Maxi",
+    "date": "2025-07-20T17:30:00Z",
+    "body": "Kvitto\nICA Maxi Lindhagen\nDatum: 2025-07-20\nMjölk 3% - 18,90 kr\nBröd - 32,00 kr\nKyckling - 89,90 kr\nTotalt: 140,80 kr\nBetalt med: Kort •••• 5678",
+    "labels": ["INBOX", "CATEGORY_UPDATES"],
+    "is_receipt": true
+  },
+  {
+    "id": "aabbcc0020",
+    "from": "noreply@grab.com",
+    "subject": "GrabFood order receipt",
+    "date": "2025-08-20T12:30:00Z",
+    "body": "GrabFood Receipt\nRestaurant: Pad Thai Express\nPad Thai x1 - ฿120\nGreen Curry x1 - ฿150\nDelivery: ฿35\nTotal: ฿305\nPaid with GrabPay",
+    "labels": ["INBOX", "CATEGORY_UPDATES"],
+    "is_receipt": true
+  },
+  {
+    "id": "aabbcc0021",
+    "from": "team@slack.com",
+    "subject": "Your team has a new channel",
+    "date": "2025-06-12T09:15:00Z",
+    "body": "A new channel #project-alpha has been created in your workspace.",
+    "labels": ["INBOX", "CATEGORY_UPDATES"],
+    "is_receipt": false
+  },
+  {
+    "id": "aabbcc0022",
+    "from": "noreply@twitter.com",
+    "subject": "Your tweet got 50 likes!",
+    "date": "2025-07-08T14:20:00Z",
+    "body": "Your recent tweet is getting attention!\n50 people liked your tweet.",
+    "labels": ["INBOX", "CATEGORY_SOCIAL"],
+    "is_receipt": false
+  },
+  {
+    "id": "aabbcc0023",
+    "from": "calendar@google.com",
+    "subject": "Reminder: Dentist appointment tomorrow",
+    "date": "2025-08-04T18:00:00Z",
+    "body": "Reminder: Dentist appointment\nWhen: Aug 5, 2025 at 10:00 AM\nWhere: Dr. Cohen Dental Clinic, Rothschild Blvd",
+    "labels": ["INBOX", "CATEGORY_PERSONAL"],
+    "is_receipt": false
+  },
+  {
+    "id": "aabbcc0024",
+    "from": "updates@medium.com",
+    "subject": "Daily digest: Top stories for you",
+    "date": "2025-07-22T06:00:00Z",
+    "body": "Your daily Medium digest\n1. Why Rust is the future\n2. Building microservices with Go\n3. The state of web development in 2025",
+    "labels": ["INBOX", "CATEGORY_PROMOTIONS"],
+    "is_receipt": false
+  },
+  {
+    "id": "aabbcc0025",
+    "from": "noreply@vercel.com",
+    "subject": "Deployment successful: my-app",
+    "date": "2025-08-12T11:45:00Z",
+    "body": "Deployment complete\nProject: my-app\nBranch: main\nCommit: abc1234\nURL: https://my-app.vercel.app\nStatus: Ready",
+    "labels": ["INBOX", "CATEGORY_UPDATES"],
+    "is_receipt": false
+  },
+  {
+    "id": "aabbcc0026",
+    "from": "boss@company.com",
+    "subject": "Q3 planning - agenda items needed",
+    "date": "2025-07-28T08:30:00Z",
+    "body": "Hi team,\nPlease submit your agenda items for the Q3 planning meeting by Friday.\nThanks",
+    "labels": ["INBOX", "CATEGORY_PERSONAL"],
+    "is_receipt": false
+  },
+  {
+    "id": "aabbcc0027",
+    "from": "noreply@dropbox.com",
+    "subject": "Someone shared a file with you",
+    "date": "2025-06-30T13:00:00Z",
+    "body": "Jane Doe shared 'Project Proposal.pdf' with you.\nClick to view in Dropbox.",
+    "labels": ["INBOX", "CATEGORY_UPDATES"],
+    "is_receipt": false
+  },
+  {
+    "id": "aabbcc0028",
+    "from": "news@hackernews.com",
+    "subject": "HN Weekly: Top posts this week",
+    "date": "2025-08-08T07:00:00Z",
+    "body": "Top posts on Hacker News this week:\n1. Show HN: I built a receipt scanner\n2. SQLite is all you need\n3. The death of microservices",
+    "labels": ["INBOX", "CATEGORY_PROMOTIONS"],
+    "is_receipt": false
+  },
+  {
+    "id": "aabbcc0029",
+    "from": "noreply@figma.com",
+    "subject": "You were mentioned in a comment",
+    "date": "2025-07-18T16:20:00Z",
+    "body": "Sarah mentioned you in a comment on 'Dashboard Redesign':\n\"@you can you check the spacing on the header?\"",
+    "labels": ["INBOX", "CATEGORY_UPDATES"],
+    "is_receipt": false
+  },
+  {
+    "id": "aabbcc002a",
+    "from": "support@notion.so",
+    "subject": "Welcome to Notion!",
+    "date": "2025-04-15T10:00:00Z",
+    "body": "Welcome to Notion!\nHere are some tips to get started:\n1. Create your first page\n2. Try the AI assistant\n3. Invite your team",
+    "labels": ["INBOX", "CATEGORY_UPDATES"],
+    "is_receipt": false
+  },
+  {
+    "id": "aabbcc002b",
+    "from": "deals@booking.com",
+    "subject": "Last minute deals: Hotels in Rome from €49/night",
+    "date": "2025-08-25T05:00:00Z",
+    "body": "Summer getaway deals!\nRome: from €49/night\nParis: from €65/night\nBarcelona: from €55/night\nBook now and save up to 40%!",
+    "labels": ["INBOX", "CATEGORY_PROMOTIONS"],
+    "is_receipt": false
+  },
+  {
+    "id": "aabbcc002c",
+    "from": "noreply@stackoverflow.com",
+    "subject": "Your answer was accepted",
+    "date": "2025-05-30T20:00:00Z",
+    "body": "Your answer to 'How to parse JSON in Python' was accepted.\nYou earned +15 reputation.",
+    "labels": ["INBOX", "CATEGORY_UPDATES"],
+    "is_receipt": false
   }
 ]

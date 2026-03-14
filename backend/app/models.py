@@ -30,3 +30,11 @@ class Receipt(BaseModel):
     currency: str | None = None
     vendor: str | None = None
     classification: ClassificationResult
+
+
+class PaginatedEmails(BaseModel):
+    items: list[Email]
+    total: int
+    offset: int
+    limit: int
+    has_more: bool
