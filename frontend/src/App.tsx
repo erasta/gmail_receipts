@@ -10,9 +10,7 @@ import {
   Container,
   Alert,
   IconButton,
-  FormControlLabel,
   Paper,
-  Switch,
   Table,
   TableBody,
   TableCell,
@@ -540,21 +538,20 @@ function App() {
             </ToggleButtonGroup>
           </Tooltip>
           <Tooltip title="Auto-classify emails as they load">
-            <FormControlLabel
-              control={
-                <Switch
-                  checked={autoClassify}
-                  onChange={(_, checked) => setAutoClassify(checked)}
-                  size="small"
-                  sx={{ '& .MuiSwitch-thumb': { bgcolor: '#fff' } }}
-                />
-              }
-              label="Auto"
+            <Chip
+              label={autoClassify ? 'Auto: ON' : 'Auto: OFF'}
+              onClick={() => setAutoClassify(prev => !prev)}
+              size="small"
               sx={{
                 ml: 1.5,
-                mr: 0,
-                color: 'rgba(255,255,255,0.7)',
-                '& .MuiFormControlLabel-label': { fontSize: '0.8rem' },
+                cursor: 'pointer',
+                fontWeight: 600,
+                fontSize: '0.75rem',
+                color: '#fff',
+                bgcolor: autoClassify ? 'rgba(100,200,100,0.5)' : 'rgba(255,255,255,0.15)',
+                border: '1px solid',
+                borderColor: autoClassify ? 'rgba(100,255,100,0.5)' : 'rgba(255,255,255,0.3)',
+                '&:hover': { bgcolor: autoClassify ? 'rgba(100,200,100,0.7)' : 'rgba(255,255,255,0.25)' },
               }}
             />
           </Tooltip>
