@@ -113,7 +113,8 @@ def main():
     )
     print("\n*****\nModel loaded.\n*****\n")
 
-    for mid in message_ids:
+    total = len(message_ids)
+    for i, mid in enumerate(message_ids, 1):
         mid_str = mid.decode()
 
         status, uid_data = mail.fetch(mid_str, "(UID)")
@@ -146,6 +147,8 @@ def main():
             date_=date_,
             body=body,
             download_attachments=download_attachments,
+            index=i,
+            total=total,
         )
 
     mail.logout()

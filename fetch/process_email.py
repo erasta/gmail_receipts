@@ -40,6 +40,8 @@ def process_email(
     date_: str,
     body: str,
     download_attachments: Callable[[], list["Attachment"]],
+    index: int = 0,
+    total: int = 0,
 ):
     attachments = download_attachments()
     attachment_names = [a.filename for a in attachments]
@@ -65,7 +67,7 @@ def process_email(
     result = json.loads(raw)
     is_receipt = result.get("is_receipt", False)
 
-    print(f"UID:     {uid}")
+    print(f"[{index}/{total}] UID: {uid}")
     print(f"Date:    {date_}")
     print(f"From:    {from_}")
     print(f"Subject: {subject}")
@@ -74,7 +76,9 @@ def process_email(
         print(f"Files:   {', '.join(attachment_names)}")
     print(f"LLM:     {raw}")
     print(f"Time:    {duration:.1f}s")
-    print("-" * 60)
+    print()
+    print("=" * 60)
+    print()
 
     if not is_receipt:
         return
