@@ -16,6 +16,8 @@ RUN apt-get update \
     && rm -rf /var/lib/apt/lists/* \
     && curl -fsSL https://ollama.com/install.sh | bash
 
+RUN pip install --no-cache-dir requests
+
 WORKDIR /app
 COPY *.py .
 CMD ["bash", "-c", "\
