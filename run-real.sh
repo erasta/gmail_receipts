@@ -15,10 +15,13 @@ RUN apt-get update \
         python3 \
         python3-pip \
         python3-venv \
+        zstd \
     && rm -rf /var/lib/apt/lists/*
 
 # Install Ollama
 RUN curl -fsSL https://ollama.com/install.sh | bash
+
+RUN mkdir -p /home/node/.ollama && chown node:node /home/node/.ollama
 
 USER node
 EOF
@@ -48,4 +51,4 @@ exec docker run -it --rm \
   -e OLLAMA_NO_CLOUD=1 \
   -w /app/backend \
   "$IMAGE_NAME" \
-  bash -c "ollama serve &>/dev/null & sleep 2 && .venv/bin/python -m uvicorn app.main:app --host 0.0.0.0 --port 8000"
+  bash -c "ollama serve & sleep 2 && .venv/bin/python -m uvicorn app.main:app --host 0.0.0.0 --port 8000"

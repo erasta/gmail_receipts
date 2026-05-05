@@ -155,7 +155,7 @@ class OllamaClassifier:
 
         resp = requests.post(
             f"{self._ollama_url}/api/generate",
-            json={"model": self._model, "prompt": prompt, "stream": False},
+            json={"model": self._model, "prompt": prompt, "stream": False, "format": "json"},
             timeout=120,
         )
         resp.raise_for_status()
