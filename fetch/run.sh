@@ -33,4 +33,5 @@ docker run --rm $GPU_FLAG \
   -e GMAIL_APP_PASSWORD="$2" \
   -e OLLAMA_NO_CLOUD=1 \
   -v "$HOME/.ollama/models:/root/.ollama/models:ro" \
+  -v "$SCRIPT_DIR/output:/output" \
   gmail-fetch
