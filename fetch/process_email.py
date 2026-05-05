@@ -84,10 +84,11 @@ def process_email(
         return
 
     dt = parsedate_to_datetime(date_)
+    month = dt.strftime("%Y-%m")
     timestamp = dt.strftime("%Y-%m-%dT%H-%M-%S")
     base_name = f"{timestamp}_{uid}"
-
-    os.makedirs(OUTPUT_DIR, exist_ok=True)
+    month_dir = os.path.join(OUTPUT_DIR, month)
+    os.makedirs(month_dir, exist_ok=True)
 
     metadata = {
         "uid": uid,
@@ -98,11 +99,11 @@ def process_email(
         "classification": result,
         "attachments": attachment_names,
     }
-    with open(os.path.join(OUTPUT_DIR, f"{base_name}.json"), "w", encoding="utf-8") as f:
+    with open(os.path.join(month_dir, f"{base_name}.json"), "w", encoding="utf-8") as f:
         json.dump(metadata, f, indent=2, ensure_ascii=False)
 
     if attachments:
-        att_dir = os.path.join(OUTPUT_DIR, base_name)
+        att_dir = os.path.join(month_dir, base_name)
         os.makedirs(att_dir, exist_ok=True)
         for att in attachments:
             with open(os.path.join(att_dir, att.filename), "wb") as f:
