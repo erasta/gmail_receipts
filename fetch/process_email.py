@@ -1,4 +1,5 @@
 import json
+import time
 import requests
 from typing import Callable, TYPE_CHECKING
 
@@ -47,12 +48,14 @@ def process_email(
         body_preview=body_preview,
     )
 
+    t0 = time.time()
     resp = requests.post(
         "http://localhost:11434/api/generate",
         json={"model": "llama3", "prompt": prompt, "stream": False, "format": "json"},
-        timeout=120,
+        timeout=200,
     )
     resp.raise_for_status()
+    duration = time.time() - t0
     raw = resp.json()["response"].strip()
 
     print(f"UID:     {uid}")
@@ -63,4 +66,5 @@ def process_email(
     if attachment_names:
         print(f"Files:   {', '.join(attachment_names)}")
     print(f"LLM:     {raw}")
+    print(f"Time:    {duration:.1f}s")
     print("-" * 60)

@@ -20,13 +20,7 @@ RUN pip install --no-cache-dir requests
 
 WORKDIR /app
 COPY *.py .
-CMD ["bash", "-c", "\
-  ollama serve & \
-  until curl -sf http://localhost:11434/api/tags; do \
-    sleep 0.2; \
-  done && \
-  python -u fetch_emails.py \
-"]
+CMD ["bash", "-c", "ollama serve & python -u fetch_emails.py"]
 EOF
 
 GPU_FLAG=""

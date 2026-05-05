@@ -2,9 +2,12 @@ import imaplib
 import email
 import os
 import sys
+import time
 from email.header import decode_header
 from datetime import date
 import re
+
+import requests
 
 from process_email import process_email
 
@@ -89,6 +92,21 @@ def main():
 
     message_ids = (data[0] or b"").split()
     print(f"Found {len(message_ids)} emails since {since}\n")
+
+    print("\n*****\nWaiting for Ollama...\n*****\n")
+    while True:
+        try:
+            requests.get("http://localhost:11434/api/tags", timeout=2)
+            break
+        except requests.ConnectionError:
+            time.sleep(0.5)
+    print("\n*****\nOllama is up. Loading model...\n*****\n")
+    requests.post(
+        "http://localhost:11434/api/generate",
+        json={"model": "phi3.5", "prompt": "hi", "stream": False},
+        timeout=600,
+    )
+    print("\n*****\nModel loaded.\n*****\n")
 
     for mid in message_ids:
         mid_str = mid.decode()
