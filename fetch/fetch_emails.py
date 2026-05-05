@@ -4,6 +4,7 @@ import os
 import sys
 from email.header import decode_header
 from datetime import date
+import re
 
 from process_email import process_email
 
@@ -91,6 +92,15 @@ def main():
 
     for mid in message_ids:
         mid_str = mid.decode()
+
+        status, uid_data = mail.fetch(mid_str, "(UID)")
+        if status != "OK":
+            continue
+        uid_match = re.search(r"UID (\d+)", str(uid_data[0]))
+        if not uid_match:
+            continue
+        uid = uid_match.group(1)
+
         raw = _fetch_raw(mail, mid_str, "RFC822")
         if raw is None:
             continue
@@ -107,6 +117,7 @@ def main():
             return attachments
 
         process_email(
+            uid=uid,
             subject=subject,
             from_=from_,
             date_=date_,
