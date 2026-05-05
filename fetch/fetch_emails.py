@@ -5,8 +5,18 @@ import sys
 from email.header import decode_header
 from datetime import date
 
+from process_email import process_email
 
-def decode_header_value(value):
+
+class Attachment:
+    def __init__(self, filename: str, content: bytes):
+        self.filename = filename
+        self.content = content
+
+
+
+
+def decode_header_value(value: str | None) -> str:
     if value is None:
         return ""
     parts = decode_header(value)
@@ -17,6 +27,42 @@ def decode_header_value(value):
         else:
             decoded.append(part)
     return "".join(decoded)
+
+
+def _parse_full_email(raw: bytes) -> tuple[str, list[Attachment]]:
+    msg = email.message_from_bytes(raw)
+    body_parts: list[str] = []
+    attachments: list[Attachment] = []
+
+    for part in msg.walk():
+        content_disposition = str(part.get("Content-Disposition") or "")
+        content_type = part.get_content_type()
+
+        if "attachment" in content_disposition:
+            filename = part.get_filename() or "unnamed"
+            payload = part.get_payload(decode=True)
+            if isinstance(payload, bytes):
+                attachments.append(Attachment(filename, payload))
+        elif content_type == "text/plain":
+            payload = part.get_payload(decode=True)
+            if isinstance(payload, bytes):
+                charset = part.get_content_charset() or "utf-8"
+                body_parts.append(payload.decode(charset, errors="replace"))
+
+    return "\n".join(body_parts), attachments
+
+
+def _fetch_raw(mail: imaplib.IMAP4_SSL, mid_str: str, what: str) -> bytes | None:
+    status, msg_data = mail.fetch(mid_str, f"({what})")
+    if status != "OK":
+        return None
+    part = msg_data[0]
+    if not isinstance(part, tuple):
+        return None
+    raw = part[1]
+    if not isinstance(raw, bytes):
+        return None
+    return raw
 
 
 def main():
@@ -44,25 +90,25 @@ def main():
     print(f"Found {len(message_ids)} emails since {since}\n")
 
     for mid in message_ids:
-        status, msg_data = mail.fetch(mid.decode(), "(RFC822.HEADER)")
-        if status != "OK":
+        mid_str = mid.decode()
+        raw = _fetch_raw(mail, mid_str, "RFC822")
+        if raw is None:
             continue
-        part = msg_data[0]
-        if not isinstance(part, tuple):
-            continue
-        raw = part[1]
-        if not isinstance(raw, bytes):
-            continue
+
+        body, attachments = _parse_full_email(raw)
         msg = email.message_from_bytes(raw)
 
         subject = decode_header_value(msg["Subject"])
         from_ = decode_header_value(msg["From"])
         date_ = msg["Date"] or ""
 
-        print(f"Date:    {date_}")
-        print(f"From:    {from_}")
-        print(f"Subject: {subject}")
-        print("-" * 60)
+        process_email(
+            subject=subject,
+            from_=from_,
+            date_=date_,
+            body=body,
+            download_attachments=lambda: attachments,
+        )
 
     mail.logout()
     print(f"\nDone. {len(message_ids)} emails printed.")
