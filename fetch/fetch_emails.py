@@ -95,19 +95,23 @@ def main():
         if raw is None:
             continue
 
-        body, attachments = _parse_full_email(raw)
+        body, _ = _parse_full_email(raw)
         msg = email.message_from_bytes(raw)
 
         subject = decode_header_value(msg["Subject"])
         from_ = decode_header_value(msg["From"])
         date_ = msg["Date"] or ""
 
+        def download_attachments(r: bytes = raw) -> list[Attachment]:
+            _, attachments = _parse_full_email(r)
+            return attachments
+
         process_email(
             subject=subject,
             from_=from_,
             date_=date_,
             body=body,
-            download_attachments=lambda: attachments,
+            download_attachments=download_attachments,
         )
 
     mail.logout()
