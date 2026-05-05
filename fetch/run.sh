@@ -10,9 +10,30 @@ fi
 
 docker build -t gmail-fetch -f - "$SCRIPT_DIR" <<'EOF'
 FROM python:3.12-slim
+
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends curl zstd \
+    && rm -rf /var/lib/apt/lists/* \
+    && curl -fsSL https://ollama.com/install.sh | bash
+
 WORKDIR /app
 COPY *.py .
-CMD ["python", "-u", "fetch_emails.py"]
+CMD ["bash", "-c", "\
+  ollama serve & \
+  until curl -sf http://localhost:11434/api/tags; do \
+    sleep 0.2; \
+  done && \
+  python -u fetch_emails.py \
+"]
 EOF
 
-docker run --rm -e GMAIL_USER="$1" -e GMAIL_APP_PASSWORD="$2" gmail-fetch
+GPU_FLAG=""
+if docker info --format '{{.Runtimes}}' | grep -q nvidia; then
+  GPU_FLAG="--gpus all"
+fi
+
+docker run --rm $GPU_FLAG \
+  -e GMAIL_USER="$1" \
+  -e GMAIL_APP_PASSWORD="$2" \
+  -v "$HOME/.ollama/models:/root/.ollama/models:ro" \
+  gmail-fetch
