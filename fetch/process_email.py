@@ -67,6 +67,10 @@ def process_email(
     result = json.loads(raw)
     is_receipt = result.get("is_receipt", False)
 
+    dt = parsedate_to_datetime(date_)
+    month = dt.strftime("%Y-%m")
+    timestamp = dt.strftime("%Y-%m-%dT%H-%M-%S")
+
     print(f"[{index}/{total}] UID: {uid}")
     print(f"Date:    {date_}")
     print(f"From:    {from_}")
@@ -80,15 +84,25 @@ def process_email(
     print("=" * 60)
     print()
 
-    if not is_receipt:
-        return
-
-    dt = parsedate_to_datetime(date_)
-    month = dt.strftime("%Y-%m")
-    timestamp = dt.strftime("%Y-%m-%dT%H-%M-%S")
-    base_name = f"{timestamp}_{uid}"
     month_dir = os.path.join(OUTPUT_DIR, month)
     os.makedirs(month_dir, exist_ok=True)
+
+    processed_path = os.path.join(month_dir, f"{month}_processed.json")
+    processed = []
+    if os.path.exists(processed_path):
+        with open(processed_path, "r", encoding="utf-8") as f:
+            processed = json.load(f)
+    processed.append({
+        "uid": uid,
+        "timestamp": timestamp,
+        "is_receipt": is_receipt,
+    })
+    with open(processed_path, "w", encoding="utf-8") as f:
+        json.dump(processed, f, indent=2, ensure_ascii=False)
+
+    if not is_receipt:
+        return
+    base_name = f"{timestamp}_{uid}"
 
     metadata = {
         "uid": uid,
