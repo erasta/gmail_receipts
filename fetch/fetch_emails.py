@@ -1,6 +1,7 @@
 import imaplib
 import email
 import os
+import subprocess
 import sys
 import time
 from email.header import decode_header
@@ -93,6 +94,10 @@ def main():
     message_ids = (data[0] or b"").split()
     print(f"Found {len(message_ids)} emails since {since}\n")
 
+    ollama_proc = subprocess.Popen(
+        ["ollama", "serve"]
+    )
+
     print("\n*****\nWaiting for Ollama...\n*****\n")
     while True:
         try:
@@ -144,6 +149,8 @@ def main():
         )
 
     mail.logout()
+    ollama_proc.terminate()
+    ollama_proc.wait()
     print(f"\nDone. {len(message_ids)} emails printed.")
 
 

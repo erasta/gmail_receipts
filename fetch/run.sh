@@ -20,7 +20,7 @@ RUN pip install --no-cache-dir requests
 
 WORKDIR /app
 COPY *.py .
-CMD ["bash", "-c", "ollama serve & python -u fetch_emails.py"]
+CMD ["python", "-u", "fetch_emails.py"]
 EOF
 
 GPU_FLAG=""
