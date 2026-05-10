@@ -3,6 +3,7 @@
 src/.venv/
 raw_emails/
 output/
+output?/
 classification_results.json
 *.pyc
 __pycache__
