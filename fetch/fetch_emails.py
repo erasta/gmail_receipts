@@ -128,6 +128,7 @@ def main():
         if message_id in _get_seen_message_ids():
             print(f"[{i}/{total}] skip {message_id} ({time.time() - t_fetch:.2f}s)")
             continue
+        print(f"[{i}/{total}] processing {message_id}")
 
         status, uid_data = mail.fetch(mid_str, "(UID)")
         if status != "OK":
