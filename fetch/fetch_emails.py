@@ -10,7 +10,7 @@ import re
 
 import requests
 
-from process_email import process_email
+from process_email import process_email, _get_seen_message_ids
 
 
 class Attachment:
@@ -118,7 +118,16 @@ def main():
 
     total = len(message_ids)
     for i, mid in enumerate(message_ids, 1):
+        t_fetch = time.time()
         mid_str = mid.decode()
+
+        raw_mid = _fetch_raw(mail, mid_str, "BODY.PEEK[HEADER.FIELDS (MESSAGE-ID)]")
+        if raw_mid is None:
+            continue
+        message_id = email.message_from_bytes(raw_mid)["Message-ID"] or ""
+        if message_id in _get_seen_message_ids():
+            print(f"[{i}/{total}] skip {message_id} ({time.time() - t_fetch:.2f}s)")
+            continue
 
         status, uid_data = mail.fetch(mid_str, "(UID)")
         if status != "OK":
@@ -138,7 +147,7 @@ def main():
         subject = decode_header_value(msg["Subject"])
         from_ = decode_header_value(msg["From"])
         date_ = msg["Date"] or ""
-        message_id = msg["Message-ID"] or ""
+        print(f"fetch+parse: {time.time() - t_fetch:.2f}s")
 
         def download_attachments(r: bytes = raw) -> list[Attachment]:
             _, attachments = _parse_full_email(r)
