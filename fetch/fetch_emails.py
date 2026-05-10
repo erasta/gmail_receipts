@@ -74,6 +74,7 @@ def _fetch_raw(mail: imaplib.IMAP4_SSL, mid_str: str, what: str) -> bytes | None
 
 
 def main():
+    skip = int(sys.argv[1]) if len(sys.argv) > 1 else 0
     user = os.environ.get("GMAIL_USER")
     password = os.environ.get("GMAIL_APP_PASSWORD")
 
@@ -117,7 +118,7 @@ def main():
     print("\n*****\nModel loaded.\n*****\n")
 
     total = len(message_ids)
-    for i, mid in enumerate(message_ids, 1):
+    for i, mid in enumerate(message_ids[skip:], skip + 1):
         t_fetch = time.time()
         mid_str = mid.decode()
 

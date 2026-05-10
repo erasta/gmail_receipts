@@ -1,10 +1,11 @@
 #!/bin/bash
+# Usage: ./fetch/run.sh <gmail-address> <app-password> [skip]
 set -e
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 
-if [ $# -ne 2 ]; then
-  echo "Usage: ./fetch/run.sh <gmail-address> <app-password>"
+if [ $# -lt 2 ]; then
+  echo "Usage: ./fetch/run.sh <gmail-address> <app-password> [skip]"
   exit 1
 fi
 
@@ -34,4 +35,4 @@ docker run --rm $GPU_FLAG \
   -e OLLAMA_NO_CLOUD=1 \
   -v "$HOME/.ollama/models:/root/.ollama/models:ro" \
   -v "$SCRIPT_DIR/output:/output" \
-  gmail-fetch
+  gmail-fetch python -u fetch_emails.py "${@:3}"
