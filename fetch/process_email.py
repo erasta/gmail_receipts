@@ -11,6 +11,26 @@ if TYPE_CHECKING:
 
 OUTPUT_DIR = os.environ.get("OUTPUT_DIR", "/output")
 
+_seen_message_ids: set[str] | None = None
+
+
+def _get_seen_message_ids() -> set[str]:
+    global _seen_message_ids
+    if _seen_message_ids is None:
+        print(f"Building seen message IDs")
+        _seen_message_ids = set()
+        files = sorted(glob.glob(os.path.join(OUTPUT_DIR, "*", "*_processed.json")))
+        print(f"Loading seen message IDs from {len(files)} processed files...")
+        for p in files:
+            before = len(_seen_message_ids)
+            with open(p, "r", encoding="utf-8") as f:
+                for entry in json.load(f):
+                    if "message_id" in entry:
+                        _seen_message_ids.add(entry["message_id"])
+            print(f"  {os.path.relpath(p, OUTPUT_DIR)}: +{len(_seen_message_ids) - before}")
+        print(f"Loaded {len(_seen_message_ids)} seen message IDs.")
+    return _seen_message_ids
+
 PROMPT_TEMPLATE = """You are a JSON-only classifier. Reply with a single valid JSON object and nothing else.
 
 Task: decide whether this email is a financial transaction document.
@@ -45,15 +65,11 @@ def process_email(
     index: int = 0,
     total: int = 0,
 ):
-    seen = set()
-    for p in glob.glob(os.path.join(OUTPUT_DIR, "*", "*_processed.json")):
-        with open(p, "r", encoding="utf-8") as f:
-            for entry in json.load(f):
-                if "message_id" in entry:
-                    seen.add(entry["message_id"])
+    seen = _get_seen_message_ids()
     if message_id in seen:
         print(f"[{index}/{total}] skip (already processed) {message_id}")
         return
+    seen.add(message_id)
 
     attachments = download_attachments()
     attachment_names = [a.filename for a in attachments]
