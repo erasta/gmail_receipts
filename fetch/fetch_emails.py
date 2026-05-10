@@ -135,6 +135,7 @@ def main():
         subject = decode_header_value(msg["Subject"])
         from_ = decode_header_value(msg["From"])
         date_ = msg["Date"] or ""
+        message_id = msg["Message-ID"] or ""
 
         def download_attachments(r: bytes = raw) -> list[Attachment]:
             _, attachments = _parse_full_email(r)
@@ -142,6 +143,7 @@ def main():
 
         process_email(
             uid=uid,
+            message_id=message_id,
             subject=subject,
             from_=from_,
             date_=date_,

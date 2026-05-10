@@ -1,3 +1,4 @@
+import glob
 import json
 import os
 import time
@@ -35,6 +36,7 @@ Reply with ONLY valid JSON like this:
 
 def process_email(
     uid: str,
+    message_id: str,
     subject: str,
     from_: str,
     date_: str,
@@ -43,6 +45,16 @@ def process_email(
     index: int = 0,
     total: int = 0,
 ):
+    seen = set()
+    for p in glob.glob(os.path.join(OUTPUT_DIR, "*", "*_processed.json")):
+        with open(p, "r", encoding="utf-8") as f:
+            for entry in json.load(f):
+                if "message_id" in entry:
+                    seen.add(entry["message_id"])
+    if message_id in seen:
+        print(f"[{index}/{total}] skip (already processed) {message_id}")
+        return
+
     attachments = download_attachments()
     attachment_names = [a.filename for a in attachments]
 
@@ -94,6 +106,7 @@ def process_email(
             processed = json.load(f)
     processed.append({
         "uid": uid,
+        "message_id": message_id,
         "timestamp": timestamp,
         "is_receipt": is_receipt,
     })
@@ -106,6 +119,7 @@ def process_email(
 
     metadata = {
         "uid": uid,
+        "message_id": message_id,
         "date": date_,
         "from": from_,
         "subject": subject,
