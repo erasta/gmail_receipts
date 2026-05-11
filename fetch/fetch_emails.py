@@ -126,6 +126,9 @@ def main():
             if raw_mid is None:
                 continue
             message_id = email.message_from_bytes(raw_mid)["Message-ID"] or ""
+            # HACK: invalidate ±20 windows around past crash indices; remove later
+            # if any(c - 20 <= i <= c + 20 for c in (2992, 3510, 5530, 5615)):
+            #     _get_seen_message_ids().discard(message_id)
             if message_id in _get_seen_message_ids():
                 print(f"[{i}/{total}] skip {message_id} ({time.time() - t_fetch:.2f}s)")
                 continue
