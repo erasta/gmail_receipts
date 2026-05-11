@@ -46,7 +46,7 @@ def _parse_full_email(raw: bytes) -> tuple[str, list[Attachment]]:
         content_type = part.get_content_type()
 
         if "attachment" in content_disposition:
-            filename = part.get_filename() or "unnamed"
+            filename = decode_header_value(part.get_filename()) or "unnamed"
             payload = part.get_payload(decode=True)
             if isinstance(payload, bytes):
                 attachments.append(Attachment(filename, payload))
