@@ -30,6 +30,8 @@ def decode_header_value(value: str | None) -> str:
         if isinstance(part, bytes):
             if charset == "unknown-8bit":
                 charset = None
+            if charset and charset.lower().endswith(("-i", "-e")):
+                charset = charset[:-2]
             decoded.append(part.decode(charset or "utf-8", errors="replace"))
         else:
             decoded.append(part)
@@ -54,6 +56,10 @@ def _parse_full_email(raw: bytes) -> tuple[str, list[Attachment]]:
             payload = part.get_payload(decode=True)
             if isinstance(payload, bytes):
                 charset = part.get_content_charset() or "utf-8"
+                if charset.lower().endswith(("-i", "-e")):
+                    charset = charset[:-2]
+                if charset == "unknown-8bit":
+                    charset = "utf-8"
                 body_parts.append(payload.decode(charset, errors="replace"))
 
     return "\n".join(body_parts), attachments
