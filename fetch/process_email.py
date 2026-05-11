@@ -93,7 +93,9 @@ def process_email(
     raw = resp.json()["response"].strip()
 
     result = json.loads(raw)
-    is_receipt = result.get("is_receipt", False)
+    is_receipt = result["is_receipt"]
+    if not isinstance(is_receipt, bool):
+        raise ValueError(f"is_receipt must be bool, got {type(is_receipt).__name__}: {is_receipt!r}")
 
     dt = parsedate_to_datetime(date_)
     month = dt.strftime("%Y-%m")
