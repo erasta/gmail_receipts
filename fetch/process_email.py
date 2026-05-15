@@ -2,6 +2,7 @@ import glob
 import json
 import os
 import time
+from datetime import datetime
 from email.utils import parsedate_to_datetime
 import requests
 from typing import Callable, TYPE_CHECKING
@@ -97,7 +98,10 @@ def process_email(
     if not isinstance(is_receipt, bool):
         raise ValueError(f"is_receipt must be bool, got {type(is_receipt).__name__}: {is_receipt!r}")
 
-    dt = parsedate_to_datetime(date_)
+    try:
+        dt = parsedate_to_datetime(date_)
+    except (ValueError, TypeError):
+        dt = datetime.fromisoformat(date_)
     month = dt.strftime("%Y-%m")
     timestamp = dt.strftime("%Y-%m-%dT%H-%M-%S")
 
