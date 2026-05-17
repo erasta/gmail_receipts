@@ -83,20 +83,28 @@ def process_email(
         body_preview=body_preview,
     )
 
-    t0 = time.time()
-    resp = requests.post(
-        "http://localhost:11434/api/generate",
-        json={"model": "llama3", "prompt": prompt, "stream": False, "format": "json"},
-        timeout=200,
-    )
-    resp.raise_for_status()
-    duration = time.time() - t0
-    raw = resp.json()["response"].strip()
+    max_attempts = 3
+    for attempt in range(1, max_attempts + 1):
+        t0 = time.time()
+        resp = requests.post(
+            "http://localhost:11434/api/generate",
+            json={"model": "llama3", "prompt": prompt, "stream": False, "format": "json"},
+            timeout=200,
+        )
+        resp.raise_for_status()
+        duration = time.time() - t0
+        raw = resp.json()["response"].strip()
 
-    result = json.loads(raw)
-    is_receipt = result["is_receipt"]
-    if not isinstance(is_receipt, bool):
-        raise ValueError(f"is_receipt must be bool, got {type(is_receipt).__name__}: {is_receipt!r}")
+        result = json.loads(raw)
+        try:
+            is_receipt = result["is_receipt"]
+            if not isinstance(is_receipt, bool):
+                raise ValueError(f"is_receipt must be bool, got {type(is_receipt).__name__}: {is_receipt!r}")
+            break
+        except (KeyError, ValueError) as e:
+            print(f"[attempt {attempt}/{max_attempts}] bad LLM response: {e} — raw: {raw[:200]}")
+            if attempt == max_attempts:
+                raise
 
     try:
         dt = parsedate_to_datetime(date_)
