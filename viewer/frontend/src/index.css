@@ -1,0 +1,21 @@
+:root {
+  font-family: system-ui, "Segoe UI", Roboto, sans-serif;
+  font-size: 15px;
+  line-height: 1.45;
+  color: #1a1a1a;
+  background: #fff;
+}
+
+body {
+  margin: 0;
+}
+
+#root {
+  min-height: 100vh;
+}
+
+h1,
+h2,
+h3 {
+  font-weight: 600;
+}

@@ -10,6 +10,28 @@
       "request": "launch",
       "program": "${file}",
       "console": "integratedTerminal"
+    },
+    {
+      "name": "Viewer: Backend",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${workspaceFolder}/viewer/backend/main.py",
+      "cwd": "${workspaceFolder}/viewer/backend",
+      "console": "integratedTerminal"
+    },
+    {
+      "name": "Viewer: Frontend",
+      "type": "node-terminal",
+      "request": "launch",
+      "command": "npm run dev",
+      "cwd": "${workspaceFolder}/viewer/frontend"
+    }
+  ],
+  "compounds": [
+    {
+      "name": "Viewer: Full",
+      "configurations": ["Viewer: Backend", "Viewer: Frontend"],
+      "stopAll": true
     }
   ]
 }
