@@ -21,9 +21,11 @@
     },
     {
       "name": "Viewer: Frontend",
-      "type": "node-terminal",
+      "type": "node",
       "request": "launch",
-      "command": "npm run dev",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev"],
+      "console": "integratedTerminal",
       "cwd": "${workspaceFolder}/viewer/frontend"
     }
   ],
