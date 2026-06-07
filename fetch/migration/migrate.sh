@@ -5,6 +5,7 @@ set -e
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 FETCH_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
+cd "$FETCH_DIR"
 
 if [ $# -lt 2 ]; then
   echo "Usage: ./fetch/migration/migrate.sh <gmail-address> <app-password>"
