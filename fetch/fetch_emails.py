@@ -12,6 +12,21 @@ import requests
 
 from process_email import process_email, _get_seen_message_ids
 
+# Email header -> receipt JSON key for the extra fields captured per email.
+HEADER_FIELDS = {
+    "To": "to",
+    "Cc": "cc",
+    "Reply-To": "reply_to",
+    "Sender": "sender",
+    "Bcc": "bcc",
+    "Return-Path": "return_path",
+    "Delivered-To": "delivered_to",
+    "In-Reply-To": "in_reply_to",
+    "References": "references",
+    "List-Unsubscribe": "list_unsubscribe",
+    "List-Id": "list_id",
+}
+
 
 class Attachment:
     def __init__(self, filename: str, content: bytes):
@@ -164,12 +179,16 @@ def main():
             if raw is None:
                 continue
 
-            body, _html, _ = _parse_full_email(raw)
+            body, html, _ = _parse_full_email(raw)
             msg = email.message_from_bytes(raw)
 
             subject = decode_header_value(msg["Subject"])
             from_ = decode_header_value(msg["From"])
             date_ = msg["Date"] or ""
+            headers = {
+                key: decode_header_value(msg[header])
+                for header, key in HEADER_FIELDS.items()
+            }
             print(f"fetch+parse: {time.time() - t_fetch:.2f}s")
 
             def download_attachments(r: bytes = raw) -> list[Attachment]:
@@ -184,6 +203,8 @@ def main():
                 date_=date_,
                 body=body,
                 download_attachments=download_attachments,
+                body_html=html,
+                headers=headers,
                 index=i,
                 total=total,
             )
