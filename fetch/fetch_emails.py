@@ -6,6 +6,7 @@ import sys
 import time
 from email.header import decode_header
 from datetime import date
+from dataclasses import dataclass
 import re
 
 import requests
@@ -98,6 +99,69 @@ def _fetch_raw(mail: imaplib.IMAP4_SSL, mid_str: str, what: str) -> bytes | None
     return raw
 
 
+def _parse_labels(prefix: str) -> list[str]:
+    """Pull the Gmail labels out of an X-GM-LABELS fetch response prefix."""
+    m = re.search(r"X-GM-LABELS \((.*?)\)", prefix)
+    if not m:
+        return []
+    return [
+        quoted.replace('\\"', '"').replace("\\\\", "\\") or unquoted
+        for quoted, unquoted in re.findall(r'"((?:[^"\\]|\\.)*)"|(\S+)', m.group(1))
+    ]
+
+
+@dataclass
+class FetchedEmail:
+    text: str          # plain-text part, used by the classifier
+    html: str          # html part, used for saving
+    attachments: list[Attachment]
+    labels: list[str]
+    subject: str
+    from_: str
+    date: str
+    headers: dict      # to, cc, reply_to, ...
+
+
+def fetch_email(
+    mail: imaplib.IMAP4_SSL, identifier: str, *, by_uid: bool
+) -> FetchedEmail | None:
+    """Fetch and parse one email into a FetchedEmail.
+
+    `by_uid` selects UID FETCH (located by UID) vs sequence FETCH. X-GM-LABELS
+    comes before RFC822 so the labels land in the response prefix, not after
+    the RFC822 literal (where _parse_labels wouldn't see them).
+    """
+    if by_uid:
+        status, msg_data = mail.uid("FETCH", identifier, "(X-GM-LABELS RFC822)")
+    else:
+        status, msg_data = mail.fetch(identifier, "(X-GM-LABELS RFC822)")
+    if status != "OK":
+        return None
+    part = msg_data[0]
+    if not isinstance(part, tuple):
+        return None
+    raw = part[1]
+    if not isinstance(raw, bytes):
+        return None
+    prefix = part[0].decode("utf-8", errors="replace") if isinstance(part[0], bytes) else ""
+
+    text, html, attachments = _parse_full_email(raw)
+    msg = email.message_from_bytes(raw)
+    return FetchedEmail(
+        text=text,
+        html=html,
+        attachments=attachments,
+        labels=_parse_labels(prefix),
+        subject=decode_header_value(msg["Subject"]),
+        from_=decode_header_value(msg["From"]),
+        date=msg["Date"] or "",
+        headers={
+            key: decode_header_value(msg[header])
+            for header, key in HEADER_FIELDS.items()
+        },
+    )
+
+
 def main():
     skip = int(sys.argv[1]) if len(sys.argv) > 1 else 0
     user = os.environ.get("GMAIL_USER")
@@ -175,36 +239,22 @@ def main():
                 continue
             uid = uid_match.group(1)
 
-            raw = _fetch_raw(mail, mid_str, "RFC822")
-            if raw is None:
+            em = fetch_email(mail, mid_str, by_uid=False)
+            if em is None:
                 continue
-
-            body, html, _ = _parse_full_email(raw)
-            msg = email.message_from_bytes(raw)
-
-            subject = decode_header_value(msg["Subject"])
-            from_ = decode_header_value(msg["From"])
-            date_ = msg["Date"] or ""
-            headers = {
-                key: decode_header_value(msg[header])
-                for header, key in HEADER_FIELDS.items()
-            }
             print(f"fetch+parse: {time.time() - t_fetch:.2f}s")
-
-            def download_attachments(r: bytes = raw) -> list[Attachment]:
-                _, _html, attachments = _parse_full_email(r)
-                return attachments
 
             process_email(
                 uid=uid,
                 message_id=message_id,
-                subject=subject,
-                from_=from_,
-                date_=date_,
-                body=body,
-                download_attachments=download_attachments,
-                body_html=html,
-                headers=headers,
+                subject=em.subject,
+                from_=em.from_,
+                date_=em.date,
+                body=em.text,
+                download_attachments=lambda em=em: em.attachments,
+                body_html=em.html,
+                headers=em.headers,
+                labels=em.labels,
                 index=i,
                 total=total,
             )

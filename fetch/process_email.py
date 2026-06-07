@@ -65,6 +65,7 @@ def process_email(
     download_attachments: Callable[[], list["Attachment"]],
     body_html: str = "",
     headers: dict | None = None,
+    labels: list | None = None,
     index: int = 0,
     total: int = 0,
 ):
@@ -160,6 +161,7 @@ def process_email(
         "body": body_html or body,
         "classification": result,
         "attachments": attachment_names,
+        "labels": labels or [],
     }
     metadata.update(headers or {})
     with open(os.path.join(month_dir, f"{base_name}.json"), "w", encoding="utf-8") as f:

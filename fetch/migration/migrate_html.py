@@ -10,33 +10,16 @@ wrong email's body — the migration aborts rather than risk that.
 
 Re-runs reprocess every receipt; there is no skip marker.
 """
-import email
 import glob
 import imaplib
 import json
 import os
-import re
 import sys
 import time
 
-from fetch_emails import _parse_full_email, decode_header_value
+from fetch_emails import fetch_email
 
 OUTPUT_DIR = os.environ.get("OUTPUT_DIR", "/output")
-
-# Email header -> receipt JSON key for the extra fields this migration captures.
-HEADER_FIELDS = {
-    "To": "to",
-    "Cc": "cc",
-    "Reply-To": "reply_to",
-    "Sender": "sender",
-    "Bcc": "bcc",
-    "Return-Path": "return_path",
-    "Delivered-To": "delivered_to",
-    "In-Reply-To": "in_reply_to",
-    "References": "references",
-    "List-Unsubscribe": "list_unsubscribe",
-    "List-Id": "list_id",
-}
 
 
 def _connect(user: str, password: str) -> imaplib.IMAP4_SSL:
@@ -44,35 +27,6 @@ def _connect(user: str, password: str) -> imaplib.IMAP4_SSL:
     mail.login(user, password)
     mail.select('"[Gmail]/All Mail"')
     return mail
-
-
-def _parse_labels(prefix: str) -> list[str]:
-    """Pull the Gmail labels out of an X-GM-LABELS fetch response prefix."""
-    m = re.search(r"X-GM-LABELS \((.*?)\)", prefix)
-    if not m:
-        return []
-    return [
-        quoted.replace('\\"', '"').replace("\\\\", "\\") or unquoted
-        for quoted, unquoted in re.findall(r'"((?:[^"\\]|\\.)*)"|(\S+)', m.group(1))
-    ]
-
-
-def _fetch_raw_by_uid(
-    mail: imaplib.IMAP4_SSL, uid: str
-) -> tuple[bytes, list[str]] | None:
-    # X-GM-LABELS before RFC822 so the labels land in the response prefix,
-    # not after the RFC822 literal (where _parse_labels wouldn't see them).
-    status, msg_data = mail.uid("FETCH", uid, "(X-GM-LABELS RFC822)")
-    if status != "OK":
-        return None
-    part = msg_data[0]
-    if not isinstance(part, tuple):
-        return None
-    raw = part[1]
-    if not isinstance(raw, bytes):
-        return None
-    prefix = part[0].decode("utf-8", errors="replace") if isinstance(part[0], bytes) else ""
-    return raw, _parse_labels(prefix)
 
 
 def main():
@@ -128,22 +82,17 @@ def main():
                 f"(stored {stored_uid}, found {found_uid})"
             )
 
-        result = _fetch_raw_by_uid(mail, found_uid)
-        if result is None:
+        em = fetch_email(mail, found_uid, by_uid=True)
+        if em is None:
             sys.exit(f"ABORT: fetch failed for {rel} (uid {found_uid})")
-        raw, labels = result
 
-        _text, html, _ = _parse_full_email(raw)
-        data["body"] = html or _text
-        data["labels"] = labels
-
-        msg = email.message_from_bytes(raw)
-        for header, key in HEADER_FIELDS.items():
-            data[key] = decode_header_value(msg[header])
+        data["body"] = em.html or em.text
+        data["labels"] = em.labels
+        data.update(em.headers)
 
         with open(path, "w", encoding="utf-8") as f:
             json.dump(data, f, indent=2, ensure_ascii=False)
-        print(f"[{i}/{total}] updated {rel} ({'html' if html else 'text'})")
+        print(f"[{i}/{total}] updated {rel} ({'html' if em.html else 'text'})")
 
     mail.logout()
     print("\nDone.")
