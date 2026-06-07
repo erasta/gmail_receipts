@@ -15,6 +15,7 @@ import glob
 import imaplib
 import json
 import os
+import re
 import sys
 import time
 
@@ -45,15 +46,33 @@ def _connect(user: str, password: str) -> imaplib.IMAP4_SSL:
     return mail
 
 
-def _fetch_raw_by_uid(mail: imaplib.IMAP4_SSL, uid: str) -> bytes | None:
-    status, msg_data = mail.uid("FETCH", uid, "(RFC822)")
+def _parse_labels(prefix: str) -> list[str]:
+    """Pull the Gmail labels out of an X-GM-LABELS fetch response prefix."""
+    m = re.search(r"X-GM-LABELS \((.*?)\)", prefix)
+    if not m:
+        return []
+    return [
+        quoted.replace('\\"', '"').replace("\\\\", "\\") or unquoted
+        for quoted, unquoted in re.findall(r'"((?:[^"\\]|\\.)*)"|(\S+)', m.group(1))
+    ]
+
+
+def _fetch_raw_by_uid(
+    mail: imaplib.IMAP4_SSL, uid: str
+) -> tuple[bytes, list[str]] | None:
+    # X-GM-LABELS before RFC822 so the labels land in the response prefix,
+    # not after the RFC822 literal (where _parse_labels wouldn't see them).
+    status, msg_data = mail.uid("FETCH", uid, "(X-GM-LABELS RFC822)")
     if status != "OK":
         return None
     part = msg_data[0]
     if not isinstance(part, tuple):
         return None
     raw = part[1]
-    return raw if isinstance(raw, bytes) else None
+    if not isinstance(raw, bytes):
+        return None
+    prefix = part[0].decode("utf-8", errors="replace") if isinstance(part[0], bytes) else ""
+    return raw, _parse_labels(prefix)
 
 
 def main():
@@ -109,12 +128,14 @@ def main():
                 f"(stored {stored_uid}, found {found_uid})"
             )
 
-        raw = _fetch_raw_by_uid(mail, found_uid)
-        if raw is None:
+        result = _fetch_raw_by_uid(mail, found_uid)
+        if result is None:
             sys.exit(f"ABORT: fetch failed for {rel} (uid {found_uid})")
+        raw, labels = result
 
         _text, html, _ = _parse_full_email(raw)
         data["body"] = html or _text
+        data["labels"] = labels
 
         msg = email.message_from_bytes(raw)
         for header, key in HEADER_FIELDS.items():
