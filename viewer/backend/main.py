@@ -78,7 +78,10 @@ def get_receipt(month: str, base_name: str) -> dict:
     if os.path.dirname(path) != month_dir or not os.path.isfile(path):
         raise HTTPException(status_code=404, detail="No such receipt")
     with open(path, "r", encoding="utf-8") as f:
-        return json.load(f)
+        data = json.load(f)
+    # base_name lives in the filename, not the file; add it for the client.
+    data["base_name"] = base_name
+    return data
 
 
 @app.get("/api/months/{month}/ledger")
