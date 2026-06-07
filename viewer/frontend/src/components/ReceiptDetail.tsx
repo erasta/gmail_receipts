@@ -71,6 +71,14 @@ export const ReceiptDetail = ({
         </Stack>
       )}
 
+      {receipt.labels && receipt.labels.length > 0 && (
+        <Stack direction="row" spacing={1} sx={{ mb: 3, flexWrap: "wrap", gap: 1 }}>
+          {receipt.labels.map((label) => (
+            <Chip key={label} size="small" variant="outlined" label={label} />
+          ))}
+        </Stack>
+      )}
+
       <Divider sx={{ my: 2 }} />
       <Typography variant="subtitle1" gutterBottom>
         Body

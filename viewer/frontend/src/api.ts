@@ -21,6 +21,7 @@ export type ReceiptSummary = {
 export type Receipt = ReceiptSummary & {
   message_id: string;
   body: string;
+  labels?: string[];
   to?: string;
   cc?: string;
   reply_to?: string;
