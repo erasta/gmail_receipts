@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
+import { Box, Typography } from "@mui/material";
 import {
-  attachmentUrl,
   fetchLedger,
   fetchMonths,
   fetchReceipt,
@@ -9,25 +9,31 @@ import {
   type Receipt,
   type ReceiptSummary,
 } from "./api";
-import "./App.css";
-
-const isImage = (filename: string) =>
-  /\.(png|jpe?g|gif|webp|bmp|svg)$/i.test(filename);
-const isPdf = (filename: string) => /\.pdf$/i.test(filename);
+import { CURRENT_YEAR, pad } from "./constants";
+import { AppHeader } from "./components/AppHeader";
+import { MonthPicker } from "./components/MonthPicker";
+import { ReceiptList } from "./components/ReceiptList";
+import { ReceiptDetail } from "./components/ReceiptDetail";
 
 export const App = () => {
   const [months, setMonths] = useState<string[]>([]);
-  const [month, setMonth] = useState<string>("");
+  const [year, setYear] = useState<number>(CURRENT_YEAR);
+  const [monthNum, setMonthNum] = useState<number>(new Date().getMonth() + 1);
   const [ledger, setLedger] = useState<Ledger | null>(null);
   const [receipts, setReceipts] = useState<ReceiptSummary[]>([]);
   const [selected, setSelected] = useState<Receipt | null>(null);
 
-  // Load the list of months once, and pick the newest as the default.
+  const month = `${year}-${pad(monthNum)}`;
+
+  // Load the months that have data and select the newest one; if there are
+  // none, the selection stays on the current month (the initial state).
   useEffect(() => {
     fetchMonths().then((list) => {
       setMonths(list);
       if (list.length > 0) {
-        setMonth(list[0]);
+        const [y, m] = list[0].split("-");
+        setYear(Number(y));
+        setMonthNum(Number(m));
       }
     });
   }, []);
@@ -46,107 +52,62 @@ export const App = () => {
     fetchReceipt(month, baseName).then(setSelected);
   };
 
+  // Trigger a fetch for the selected month. Not wired to the backend yet;
+  // for now it just shows the date range that would be sent.
+  const runFetch = () => {
+    const since = `${month}-01`;
+    const before =
+      monthNum === 12
+        ? `${year + 1}-01-01`
+        : `${year}-${pad(monthNum + 1)}-01`;
+    alert(`Run fetch with:\nFETCH_SINCE=${since}\nFETCH_BEFORE=${before}`);
+  };
+
   return (
-    <div className="layout">
-      <aside className="sidebar">
-        <h1>Receipts</h1>
-        <select value={month} onChange={(e) => setMonth(e.target.value)}>
-          {months.map((m) => (
-            <option key={m} value={m}>
-              {m}
-            </option>
-          ))}
-        </select>
-        {ledger && (
-          <p className="summary">
-            {ledger.receipts} receipts / {ledger.seen} emails seen
-          </p>
-        )}
-        <ul className="receipt-list">
-          {receipts.map((r) => (
-            <li
-              key={r.base_name}
-              className={
-                selected?.base_name === r.base_name ? "active" : undefined
-              }
-              onClick={() => openReceipt(r.base_name)}
-            >
-              <div className="row-subject">{r.subject || "(no subject)"}</div>
-              <div className="row-from">{r.from}</div>
-              <div className="row-meta">
-                <span>{r.date}</span>
-                {r.attachments.length > 0 && (
-                  <span className="badge">📎 {r.attachments.length}</span>
-                )}
-              </div>
-            </li>
-          ))}
-          {receipts.length === 0 && <li className="empty">No receipts</li>}
-        </ul>
-      </aside>
+    <Box sx={{ display: "flex", flexDirection: "column", height: "100vh" }}>
+      <AppHeader />
 
-      <main className="detail">
-        {selected ? (
-          <ReceiptDetail month={month} receipt={selected} />
-        ) : (
-          <div className="placeholder">Select a receipt</div>
-        )}
-      </main>
-    </div>
-  );
-};
+      <Box sx={{ display: "flex", flex: 1, minHeight: 0 }}>
+        <Box
+          component="aside"
+          sx={{
+            width: 360,
+            flexShrink: 0,
+            borderRight: 1,
+            borderColor: "divider",
+            display: "flex",
+            flexDirection: "column",
+            p: 2,
+          }}
+        >
+          <MonthPicker
+            months={months}
+            year={year}
+            monthNum={monthNum}
+            month={month}
+            onYearChange={setYear}
+            onMonthChange={setMonthNum}
+            onRunFetch={runFetch}
+          />
 
-const ReceiptDetail = ({
-  month,
-  receipt,
-}: {
-  month: string;
-  receipt: Receipt;
-}) => {
-  const c = receipt.classification;
-  return (
-    <div className="receipt">
-      <h2>{receipt.subject || "(no subject)"}</h2>
-      <dl className="fields">
-        <dt>From</dt>
-        <dd>{receipt.from}</dd>
-        <dt>Date</dt>
-        <dd>{receipt.date}</dd>
-        <dt>UID</dt>
-        <dd>{receipt.uid}</dd>
-      </dl>
+          <ReceiptList
+            ledger={ledger}
+            receipts={receipts}
+            selectedBaseName={selected?.base_name}
+            onSelect={openReceipt}
+          />
+        </Box>
 
-      {c && (
-        <div className="classification">
-          <span className="badge">
-            confidence {(c.confidence * 100).toFixed(0)}%
-          </span>
-          <span className="reason">{c.reason}</span>
-        </div>
-      )}
-
-      {receipt.attachments.length > 0 && (
-        <section className="attachments">
-          <h3>Attachments</h3>
-          {receipt.attachments.map((filename) => {
-            const url = attachmentUrl(month, receipt.base_name, filename);
-            return (
-              <div key={filename} className="attachment">
-                <a href={url} target="_blank" rel="noreferrer">
-                  {filename}
-                </a>
-                {isImage(filename) && <img src={url} alt={filename} />}
-                {isPdf(filename) && <iframe src={url} title={filename} />}
-              </div>
-            );
-          })}
-        </section>
-      )}
-
-      <section className="body">
-        <h3>Body</h3>
-        <pre>{receipt.body}</pre>
-      </section>
-    </div>
+        <Box component="main" sx={{ flex: 1, overflowY: "auto", p: 3 }}>
+          {selected ? (
+            <ReceiptDetail month={month} receipt={selected} />
+          ) : (
+            <Typography color="text.disabled" sx={{ mt: 8, textAlign: "center" }}>
+              Select a receipt
+            </Typography>
+          )}
+        </Box>
+      </Box>
+    </Box>
   );
 };
