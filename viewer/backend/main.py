@@ -7,10 +7,10 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 
 # Where the fetch pipeline writes its month folders. Same env var the
-# pipeline uses; defaults to the repo's fetch/output so this just works locally.
+# pipeline uses; defaults to the repo's output/ at the project root.
 OUTPUT_DIR = os.environ.get(
     "OUTPUT_DIR",
-    os.path.join(os.path.dirname(__file__), "..", "..", "fetch", "output"),
+    os.path.join(os.path.dirname(__file__), "..", "..", "output"),
 )
 OUTPUT_DIR = os.path.abspath(OUTPUT_DIR)
 
