@@ -45,8 +45,32 @@ export const ReceiptDetail = ({
         </Stack>
       )}
 
+      <Divider sx={{ my: 2 }} />
+      <Typography variant="subtitle1" gutterBottom>
+        Body
+      </Typography>
+      <Box
+        component="iframe"
+        srcDoc={receipt.body}
+        title="email body"
+        sandbox="allow-same-origin"
+        onLoad={(e) => {
+          const f = e.currentTarget as HTMLIFrameElement;
+          const doc = f.contentWindow?.document;
+          if (doc) {
+            f.style.height = `${doc.documentElement.scrollHeight}px`;
+          }
+        }}
+        sx={{
+          width: "100%",
+          border: 1,
+          borderColor: "divider",
+          borderRadius: 1,
+        }}
+      />
+
       {receipt.attachments.length > 0 && (
-        <Box sx={{ mb: 3 }}>
+        <Box sx={{ mt: 3 }}>
           <Typography variant="subtitle1" gutterBottom>
             Attachments
           </Typography>
@@ -85,24 +109,6 @@ export const ReceiptDetail = ({
           })}
         </Box>
       )}
-
-      <Divider sx={{ my: 2 }} />
-      <Typography variant="subtitle1" gutterBottom>
-        Body
-      </Typography>
-      <Box
-        component="iframe"
-        srcDoc={receipt.body}
-        title="email body"
-        sandbox=""
-        sx={{
-          width: "100%",
-          height: 600,
-          border: 1,
-          borderColor: "divider",
-          borderRadius: 1,
-        }}
-      />
     </Box>
   );
 };
