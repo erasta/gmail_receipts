@@ -87,15 +87,22 @@ def main():
         print("Set GMAIL_USER and GMAIL_APP_PASSWORD environment variables", file=sys.stderr)
         sys.exit(1)
 
-    since = date(2025, 1, 24)
-    imap_search = since.strftime("%-d-%b-%Y")
+    # Optional date range (YYYY-MM-DD). Defaults to the original start, no end.
+    since_env = os.environ.get("FETCH_SINCE")
+    before_env = os.environ.get("FETCH_BEFORE")
+    since = date.fromisoformat(since_env) if since_env else date(2025, 1, 24)
+    parts = [f'SINCE {since.strftime("%-d-%b-%Y")}']
+    if before_env:
+        before = date.fromisoformat(before_env)
+        parts.append(f'BEFORE {before.strftime("%-d-%b-%Y")}')
+    imap_search = "(" + " ".join(parts) + ")"
 
     print(f"Connecting to Gmail as {user}...")
     mail = imaplib.IMAP4_SSL("imap.gmail.com")
     mail.login(user, password)
     mail.select('"[Gmail]/All Mail"')
 
-    status, data = mail.search(None, f'(SINCE {imap_search})')
+    status, data = mail.search(None, imap_search)
     if status != "OK":
         print(f"Search failed: {status}", file=sys.stderr)
         sys.exit(1)
