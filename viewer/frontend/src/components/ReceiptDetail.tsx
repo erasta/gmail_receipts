@@ -91,20 +91,18 @@ export const ReceiptDetail = ({
         Body
       </Typography>
       <Box
-        component="pre"
+        component="iframe"
+        srcDoc={receipt.body}
+        title="email body"
+        sandbox=""
         sx={{
-          bgcolor: "grey.100",
+          width: "100%",
+          height: 600,
           border: 1,
           borderColor: "divider",
           borderRadius: 1,
-          p: 2,
-          whiteSpace: "pre-wrap",
-          wordBreak: "break-word",
-          fontFamily: "inherit",
         }}
-      >
-        {receipt.body}
-      </Box>
+      />
     </Box>
   );
 };
