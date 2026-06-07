@@ -38,9 +38,10 @@ def decode_header_value(value: str | None) -> str:
     return "".join(decoded)
 
 
-def _parse_full_email(raw: bytes) -> tuple[str, list[Attachment]]:
+def _parse_full_email(raw: bytes) -> tuple[str, str, list[Attachment]]:
     msg = email.message_from_bytes(raw)
     body_parts: list[str] = []
+    html_parts: list[str] = []
     attachments: list[Attachment] = []
 
     for part in msg.walk():
@@ -52,7 +53,7 @@ def _parse_full_email(raw: bytes) -> tuple[str, list[Attachment]]:
             payload = part.get_payload(decode=True)
             if isinstance(payload, bytes):
                 attachments.append(Attachment(filename, payload))
-        elif content_type == "text/plain":
+        elif content_type in ("text/plain", "text/html"):
             payload = part.get_payload(decode=True)
             if isinstance(payload, bytes):
                 charset = part.get_content_charset() or "utf-8"
@@ -60,9 +61,13 @@ def _parse_full_email(raw: bytes) -> tuple[str, list[Attachment]]:
                     charset = charset[:-2]
                 if charset == "unknown-8bit":
                     charset = "utf-8"
-                body_parts.append(payload.decode(charset, errors="replace"))
+                decoded = payload.decode(charset, errors="replace")
+                if content_type == "text/plain":
+                    body_parts.append(decoded)
+                else:
+                    html_parts.append(decoded)
 
-    return "\n".join(body_parts), attachments
+    return "\n".join(body_parts), "\n".join(html_parts), attachments
 
 
 def _fetch_raw(mail: imaplib.IMAP4_SSL, mid_str: str, what: str) -> bytes | None:
@@ -159,7 +164,7 @@ def main():
             if raw is None:
                 continue
 
-            body, _ = _parse_full_email(raw)
+            body, _html, _ = _parse_full_email(raw)
             msg = email.message_from_bytes(raw)
 
             subject = decode_header_value(msg["Subject"])
@@ -168,7 +173,7 @@ def main():
             print(f"fetch+parse: {time.time() - t_fetch:.2f}s")
 
             def download_attachments(r: bytes = raw) -> list[Attachment]:
-                _, attachments = _parse_full_email(r)
+                _, _html, attachments = _parse_full_email(r)
                 return attachments
 
             process_email(
