@@ -27,6 +27,32 @@ export const ReceiptDetail = ({
       >
         <Typography variant="body2" color="text.secondary">From</Typography>
         <Typography variant="body2">{receipt.from}</Typography>
+        {(
+          [
+            ["To", receipt.to],
+            ["Cc", receipt.cc],
+            ["Reply-To", receipt.reply_to],
+            ["Sender", receipt.sender],
+            ["Bcc", receipt.bcc],
+            ["Return-Path", receipt.return_path],
+            ["Delivered-To", receipt.delivered_to],
+            ["In-Reply-To", receipt.in_reply_to],
+            ["References", receipt.references],
+            ["List-Unsubscribe", receipt.list_unsubscribe],
+            ["List-Id", receipt.list_id],
+          ] as const
+        )
+          .filter(([, value]) => value)
+          .map(([label, value]) => (
+            <Box key={label} sx={{ display: "contents" }}>
+              <Typography variant="body2" color="text.secondary">
+                {label}
+              </Typography>
+              <Typography variant="body2" sx={{ wordBreak: "break-word" }}>
+                {value}
+              </Typography>
+            </Box>
+          ))}
         <Typography variant="body2" color="text.secondary">Date</Typography>
         <Typography variant="body2">{receipt.date}</Typography>
         <Typography variant="body2" color="text.secondary">UID</Typography>

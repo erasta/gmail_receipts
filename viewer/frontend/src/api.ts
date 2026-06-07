@@ -21,6 +21,17 @@ export type ReceiptSummary = {
 export type Receipt = ReceiptSummary & {
   message_id: string;
   body: string;
+  to?: string;
+  cc?: string;
+  reply_to?: string;
+  sender?: string;
+  bcc?: string;
+  return_path?: string;
+  delivered_to?: string;
+  in_reply_to?: string;
+  references?: string;
+  list_unsubscribe?: string;
+  list_id?: string;
 };
 
 export type Ledger = {

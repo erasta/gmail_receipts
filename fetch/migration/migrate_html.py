@@ -18,9 +18,24 @@ import os
 import sys
 import time
 
-from fetch_emails import _parse_full_email
+from fetch_emails import _parse_full_email, decode_header_value
 
 OUTPUT_DIR = os.environ.get("OUTPUT_DIR", "/output")
+
+# Email header -> receipt JSON key for the extra fields this migration captures.
+HEADER_FIELDS = {
+    "To": "to",
+    "Cc": "cc",
+    "Reply-To": "reply_to",
+    "Sender": "sender",
+    "Bcc": "bcc",
+    "Return-Path": "return_path",
+    "Delivered-To": "delivered_to",
+    "In-Reply-To": "in_reply_to",
+    "References": "references",
+    "List-Unsubscribe": "list_unsubscribe",
+    "List-Id": "list_id",
+}
 
 
 def _connect(user: str, password: str) -> imaplib.IMAP4_SSL:
@@ -70,14 +85,14 @@ def main():
 
         try:
             status, search_data = mail.uid(
-                "SEARCH", None, "HEADER", "Message-ID", message_id
+                "SEARCH", None, "HEADER", "Message-ID", message_id  # type: ignore[arg-type]
             )
         except imaplib.IMAP4.abort as e:
             print(f"IMAP aborted: {e}. Reconnecting in 10s...")
             time.sleep(10)
             mail = _connect(user, password)
             status, search_data = mail.uid(
-                "SEARCH", None, "HEADER", "Message-ID", message_id
+                "SEARCH", None, "HEADER", "Message-ID", message_id # type: ignore[arg-type]
             )
 
         if status != "OK":
@@ -100,6 +115,11 @@ def main():
 
         _text, html, _ = _parse_full_email(raw)
         data["body"] = html or _text
+
+        msg = email.message_from_bytes(raw)
+        for header, key in HEADER_FIELDS.items():
+            data[key] = decode_header_value(msg[header])
+
         with open(path, "w", encoding="utf-8") as f:
             json.dump(data, f, indent=2, ensure_ascii=False)
         print(f"[{i}/{total}] updated {rel} ({'html' if html else 'text'})")
