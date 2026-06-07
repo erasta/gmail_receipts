@@ -105,6 +105,8 @@ def process_email(
             print(f"[attempt {attempt}/{max_attempts}] bad LLM response: {e} — raw: {raw[:200]}")
             if attempt == max_attempts:
                 raise
+    else:
+        raise RuntimeError("classification loop ended without a result")
 
     try:
         dt = parsedate_to_datetime(date_)
