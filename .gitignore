@@ -1,5 +1,6 @@
 .env
 .env.gpg
+.venv/
 src/.venv/
 raw_emails/
 output/
