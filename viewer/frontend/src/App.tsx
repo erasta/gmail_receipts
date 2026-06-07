@@ -38,15 +38,19 @@ export const App = () => {
     });
   }, []);
 
-  // When the chosen month changes, load its receipts and ledger summary.
+  // When the chosen month changes, load its receipts and ledger summary. Only
+  // months that have data exist on the backend, so skip the request (and the
+  // 404) for empty months.
   useEffect(() => {
-    if (!month) {
+    setSelected(null);
+    if (!months.includes(month)) {
+      setReceipts([]);
+      setLedger(null);
       return;
     }
-    setSelected(null);
     fetchReceipts(month).then(setReceipts);
     fetchLedger(month).then(setLedger);
-  }, [month]);
+  }, [month, months]);
 
   const openReceipt = (baseName: string) => {
     fetchReceipt(month, baseName).then(setSelected);
