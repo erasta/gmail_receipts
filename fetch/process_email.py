@@ -34,9 +34,18 @@ PROMPT_TEMPLATE = """You are a JSON-only classifier. Reply with a single valid J
 
 Task: decide whether this email is a financial transaction document.
 
-"is_receipt" must be true for: receipts, invoices, bills, order confirmations with a price, subscription charges, bank/credit card alerts, taxi/ride/delivery/travel confirmations with a charge, donation receipts, refund notifications, utility bills, government fees.
+"is_receipt" must be true for: receipts, invoices, bills, order confirmations, subscription/recurring charges, bank/credit card alerts, donation receipts, refund notifications, utility/phone/internet bills, government fees, and app-store or digital-store purchase receipts.
 
-"is_receipt" must be false for: newsletters, marketing, promotions, shipping updates without price, account notifications, personal conversations, social media notifications.
+Also treat as true:
+- Any email titled or described as an invoice, bill, or receipt — even monthly/periodic ones, and even when the amount is not visible in the preview. The word "invoice", "receipt", "bill", or its equivalent in another language (e.g. "חשבונית", "Rechnung", "factura", "fattura", "regning", "φακτούρα") is a strong signal.
+- Ride, taxi, trip, or delivery summaries — including ones phrased as "your trip", "your ride", or "your journey" — since these confirm a completed paid service.
+- Travel, train, flight, or transit bookings and itineraries that represent a purchased ticket, even when phrased as "your next travel" or "your trip details".
+- Order confirmations in any language (e.g. "order confirmation", "Bestellbestätigung", "אישור הזמנה", "confirmación de pedido").
+- Forwarded emails (subject starting with "Fwd:", "FW:", "Re:", or a language equivalent) that otherwise match any of the above — classify them by their underlying content, ignoring the forwarding prefix.
+
+"is_receipt" must be false for: newsletters, marketing, promotions, shipping/tracking updates that are purely status (no purchase being confirmed), account notifications, password/security notices, personal conversations, social media notifications.
+
+When the email plausibly confirms that money was or will be charged for a specific product, service, ride, or order, lean towards true even if the exact amount is not shown in the preview.
 
 "confidence" must be a decimal number between 0.0 and 1.0.
 
