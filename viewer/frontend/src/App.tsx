@@ -14,6 +14,7 @@ import {
 import { CURRENT_YEAR, pad } from "./constants";
 import { AppHeader } from "./components/AppHeader";
 import { LabelChips } from "./components/LabelChips";
+import { ResizeHandle } from "./components/ResizeHandle";
 import { MonthPicker } from "./components/MonthPicker";
 import { ReceiptList } from "./components/ReceiptList";
 import { ReceiptDetail } from "./components/ReceiptDetail";
@@ -27,6 +28,7 @@ export const App = () => {
   const [selected, setSelected] = useState<Receipt | null>(null);
   const [labels, setLabels] = useState<LabelCount[]>([]);
   const [onLabels, setOnLabels] = useState<Set<string>>(new Set());
+  const [sidebarWidth, setSidebarWidth] = useState<number>(360);
 
   const month = `${year}-${pad(monthNum)}`;
 
@@ -109,10 +111,8 @@ export const App = () => {
         <Box
           component="aside"
           sx={{
-            width: 360,
+            width: sidebarWidth,
             flexShrink: 0,
-            borderRight: 1,
-            borderColor: "divider",
             display: "flex",
             flexDirection: "column",
             p: 2,
@@ -135,6 +135,8 @@ export const App = () => {
             onSelect={openReceipt}
           />
         </Box>
+
+        <ResizeHandle onResize={setSidebarWidth} />
 
         <Box component="main" sx={{ flex: 1, overflowY: "auto", p: 3 }}>
           {selected ? (
