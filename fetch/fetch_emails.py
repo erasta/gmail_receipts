@@ -6,12 +6,12 @@ import sys
 import time
 from email.header import decode_header
 from datetime import date
-from dataclasses import dataclass
 import re
 
 import requests
 
 from process_email import process_email, _get_seen_message_ids
+from models import FetchedEmail, Attachment
 
 # Email header -> receipt JSON key for the extra fields captured per email.
 HEADER_FIELDS = {
@@ -27,14 +27,6 @@ HEADER_FIELDS = {
     "List-Unsubscribe": "list_unsubscribe",
     "List-Id": "list_id",
 }
-
-
-class Attachment:
-    def __init__(self, filename: str, content: bytes):
-        self.filename = filename
-        self.content = content
-
-
 
 
 def decode_header_value(value: str | None) -> str:
@@ -108,18 +100,6 @@ def _parse_labels(prefix: str) -> list[str]:
         quoted.replace('\\"', '"').replace("\\\\", "\\") or unquoted
         for quoted, unquoted in re.findall(r'"((?:[^"\\]|\\.)*)"|(\S+)', m.group(1))
     ]
-
-
-@dataclass
-class FetchedEmail:
-    text: str          # plain-text part, used by the classifier
-    html: str          # html part, used for saving
-    attachments: list[Attachment]
-    labels: list[str]
-    subject: str
-    from_: str
-    date: str
-    headers: dict      # to, cc, reply_to, ...
 
 
 def fetch_email(

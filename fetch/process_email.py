@@ -5,10 +5,9 @@ import time
 from datetime import datetime
 from email.utils import parsedate_to_datetime
 import requests
-from typing import Callable, TYPE_CHECKING
+from typing import Callable
 
-if TYPE_CHECKING:
-    from fetch_emails import Attachment
+from models import Attachment
 
 OUTPUT_DIR = os.environ.get("OUTPUT_DIR", "/output")
 
