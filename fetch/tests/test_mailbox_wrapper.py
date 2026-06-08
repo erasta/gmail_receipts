@@ -5,6 +5,7 @@ from email.message import EmailMessage
 import pytest
 
 import mailbox_wrapper
+from mailbox_wrapper import _parse_labels, _parse_full_email, decode_header_value
 
 
 class FakeIMAP:
@@ -123,9 +124,13 @@ def test_get_parses_email(fake):
     assert em is not None
     assert em.uid == "42"                       # comes from the requested uid
     assert em.message_id == "<order@x>"
+    assert em.subject == "Your order"
+    assert em.from_ == "shop@example.com"
+    assert "plain" in em.text                   # plain text kept for the classifier
     assert "<b>html</b>" in em.body
     assert em.labels == ["Receipts", "\\Important"]
     assert em.headers["to"] == "me@x"
+    assert em.classification is None
     assert fake.uid_calls()[-1] == ("uid", "FETCH", "42", "(X-GM-LABELS RFC822)")
 
 
@@ -151,3 +156,66 @@ def test_reconnect_on_abort(fake):
     assert mb.search_dates(date(2025, 1, 1)) == ["3"]
     # connected twice: the initial login + one reconnect
     assert sum(1 for c in fake.calls if c[0] == "login") == 2
+
+
+# --- parsing helpers -------------------------------------------------------
+
+@pytest.mark.parametrize(
+    "prefix, expected",
+    [
+        (r'1 (X-GM-LABELS (\Important "Receipts") RFC822 {5}', ["\\Important", "Receipts"]),
+        (r'1 (X-GM-LABELS ("My Label" Work) RFC822 {5}', ["My Label", "Work"]),
+        (r'1 (X-GM-LABELS ("a\"b") RFC822 {5}', ['a"b']),
+        (r'1 (X-GM-LABELS () RFC822 {5}', []),
+        (r'1 (UID 9 RFC822 {5}', []),
+    ],
+)
+def test_parse_labels(prefix, expected):
+    assert _parse_labels(prefix) == expected
+
+
+def test_decode_header_value_none():
+    assert decode_header_value(None) == ""
+
+
+def test_decode_header_value_plain():
+    assert decode_header_value("Plain Subject") == "Plain Subject"
+
+
+def test_decode_header_value_encoded_word():
+    # RFC 2047 base64-encoded "Héllo"
+    assert decode_header_value("=?utf-8?B?SMOpbGxv?=") == "Héllo"
+
+
+def test_parse_full_email_splits_text_html_attachments():
+    msg = EmailMessage()
+    msg["Subject"] = "Receipt"
+    msg["From"] = "store@example.com"
+    msg.set_content("plain body")
+    msg.add_alternative("<p>html body</p>", subtype="html")
+    msg.add_attachment(
+        b"%PDF-1.4 fake", maintype="application", subtype="pdf", filename="invoice.pdf"
+    )
+    text, html, attachments = _parse_full_email(msg.as_bytes())
+    assert "plain body" in text
+    assert "<p>html body</p>" in html
+    assert [a.filename for a in attachments] == ["invoice.pdf"]
+    assert attachments[0].content == b"%PDF-1.4 fake"
+
+
+def test_get_wraps_plain_text_as_html(fake):
+    msg = EmailMessage()
+    msg["Subject"] = "Text only"
+    msg["From"] = "a@b.com"
+    msg["Date"] = "Mon, 03 Mar 2025 10:00:00 +0000"
+    msg["Message-ID"] = "<t@x>"
+    msg.set_content("just text & <stuff>")
+    raw = msg.as_bytes()
+
+    prefix = r'1 (X-GM-LABELS () RFC822 {%d}' % len(raw)
+    fake.script = [("OK", [(prefix.encode(), raw), b")"])]
+    em = _box(fake).get("7")
+    assert em is not None
+    # no HTML part -> body is the escaped text wrapped in <pre>
+    assert em.body.startswith("<pre>")
+    assert "just text &amp; &lt;stuff&gt;" in em.body

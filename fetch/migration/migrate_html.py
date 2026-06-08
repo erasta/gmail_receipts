@@ -1,7 +1,6 @@
 """
 One-off migration: re-fetch every already-identified receipt from Gmail and
-replace its plain-text `body` with the email's HTML part (falling back to text
-when there is no HTML part).
+refresh its stored body (HTML), labels, and header fields.
 
 Locates each email by its stored Message-ID, then verifies the returned UID
 matches the stored one. A mismatch means the mailbox's UIDs no longer line up
@@ -11,22 +10,13 @@ wrong email's body — the migration aborts rather than risk that.
 Re-runs reprocess every receipt; there is no skip marker.
 """
 import glob
-import imaplib
 import json
 import os
 import sys
-import time
 
-from fetch_emails import fetch_email
+from mailbox_wrapper import Mailbox
 
 OUTPUT_DIR = os.environ.get("OUTPUT_DIR", "/output")
-
-
-def _connect(user: str, password: str) -> imaplib.IMAP4_SSL:
-    mail = imaplib.IMAP4_SSL("imap.gmail.com")
-    mail.login(user, password)
-    mail.select('"[Gmail]/All Mail"')
-    return mail
 
 
 def main():
@@ -44,7 +34,7 @@ def main():
     total = len(files)
     print(f"Migrating {total} receipts from {OUTPUT_DIR}...\n")
 
-    mail = _connect(user, password)
+    mb = Mailbox(user, password)
 
     for i, path in enumerate(files, 1):
         rel = os.path.relpath(path, OUTPUT_DIR)
@@ -56,24 +46,9 @@ def main():
         if not message_id:
             sys.exit(f"ABORT: {rel} has no message_id")
 
-        try:
-            status, search_data = mail.uid(
-                "SEARCH", None, "HEADER", "Message-ID", message_id  # type: ignore[arg-type]
-            )
-        except imaplib.IMAP4.abort as e:
-            print(f"IMAP aborted: {e}. Reconnecting in 10s...")
-            time.sleep(10)
-            mail = _connect(user, password)
-            status, search_data = mail.uid(
-                "SEARCH", None, "HEADER", "Message-ID", message_id # type: ignore[arg-type]
-            )
-
-        if status != "OK":
-            sys.exit(f"ABORT: search failed for {rel} ({status})")
-        uids = (search_data[0] or b"").split()
-        if not uids:
+        found_uid = mb.search_message_id(message_id)
+        if found_uid is None:
             sys.exit(f"ABORT: {rel} not in mailbox (message_id {message_id})")
-        found_uid = uids[-1].decode()
 
         # Verify by UID — abort on mismatch (UIDs no longer line up with disk).
         if found_uid != stored_uid:
@@ -82,7 +57,7 @@ def main():
                 f"(stored {stored_uid}, found {found_uid})"
             )
 
-        em = fetch_email(mail, found_uid, by_uid=True)
+        em = mb.get(found_uid)
         if em is None:
             sys.exit(f"ABORT: fetch failed for {rel} (uid {found_uid})")
 
@@ -94,7 +69,7 @@ def main():
             json.dump(data, f, indent=2, ensure_ascii=False)
         print(f"[{i}/{total}] updated {rel}")
 
-    mail.logout()
+    mb.logout()
     print("\nDone.")
 
 
