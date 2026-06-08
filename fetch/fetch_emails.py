@@ -11,7 +11,7 @@ import re
 import requests
 
 from process_email import process_email, _get_seen_message_ids
-from mailbox import _parse_full_email, _parse_labels, decode_header_value
+from mailbox_wrapper import _parse_full_email, _parse_labels, decode_header_value
 from models import Email, HEADER_FIELDS
 
 

@@ -4,7 +4,7 @@ from email.message import EmailMessage
 
 import pytest
 
-import mailbox
+import mailbox_wrapper
 
 
 class FakeIMAP:
@@ -39,12 +39,12 @@ class FakeIMAP:
 def fake(monkeypatch):
     f = FakeIMAP()
     # Same fake survives reconnects, so abort/retry tests see one object.
-    monkeypatch.setattr(mailbox.imaplib, "IMAP4_SSL", lambda host: f)
+    monkeypatch.setattr(mailbox_wrapper.imaplib, "IMAP4_SSL", lambda host: f)
     return f
 
 
 def _box(fake):
-    return mailbox.Mailbox("user@x", "pw")
+    return mailbox_wrapper.Mailbox("user@x", "pw")
 
 
 # --- lifecycle -------------------------------------------------------------
@@ -56,7 +56,7 @@ def test_connect_logs_in_and_selects(fake):
 
 
 def test_context_manager_logs_out(fake):
-    with mailbox.Mailbox("user@x", "pw"):
+    with mailbox_wrapper.Mailbox("user@x", "pw"):
         pass
     assert ("logout",) in fake.calls
 
