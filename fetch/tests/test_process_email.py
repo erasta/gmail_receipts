@@ -3,7 +3,7 @@ import json
 import pytest
 
 import process_email as pe
-from process_email import process_email
+from process_email import process_email, classify
 from models import Attachment, Email
 
 
@@ -176,3 +176,76 @@ def test_bad_llm_reply_aborts(out, monkeypatch, bad_verdict):
     _mock_llm(monkeypatch, bad_verdict)
     with pytest.raises((KeyError, ValueError)):
         _run(RECEIPTS[0])
+
+
+# --- classify (the LLM call) ----------------------------------------------
+
+class _RawResp:
+    def __init__(self, raw):
+        self._raw = raw
+
+    def raise_for_status(self):
+        pass
+
+    def json(self):
+        return {"response": self._raw}
+
+
+def _mock_llm_raw(monkeypatch, *raws):
+    """Mock the LLM to return the given raw response strings, in order."""
+    seq = iter(raws)
+    calls = {"n": 0}
+
+    def post(*a, **k):
+        calls["n"] += 1
+        return _RawResp(next(seq))
+
+    monkeypatch.setattr(pe.requests, "post", post)
+    return calls
+
+
+def _email(text="some body text"):
+    return Email(
+        uid="1", message_id="<m>", date="Mon, 03 Mar 2025 10:00:00 +0000",
+        from_="a@b.com", subject="S", body="<b>x</b>",
+        attachments=[], labels=[], headers={}, text=text,
+    )
+
+
+def test_classify_returns_verdict(monkeypatch):
+    calls = _mock_llm_raw(monkeypatch, '{"is_receipt": true, "confidence": 0.9, "reason": "order"}')
+    result = classify(_email(), [])
+    assert result == {"is_receipt": True, "confidence": 0.9, "reason": "order"}
+    assert calls["n"] == 1
+
+
+def test_classify_retries_then_succeeds(monkeypatch):
+    calls = _mock_llm_raw(
+        monkeypatch,
+        '{"confidence": 0.1}',                                  # bad: missing is_receipt
+        '{"is_receipt": false, "confidence": 0.7, "reason": "news"}',
+    )
+    result = classify(_email(), [])
+    assert result["is_receipt"] is False
+    assert calls["n"] == 2
+
+
+def test_classify_raises_after_max_attempts(monkeypatch):
+    calls = _mock_llm_raw(monkeypatch, '{"x": 1}', '{"x": 1}', '{"x": 1}')
+    with pytest.raises(KeyError):
+        classify(_email(), [])
+    assert calls["n"] == 3
+
+
+def test_classify_non_bool_is_rejected(monkeypatch):
+    _mock_llm_raw(monkeypatch, '{"is_receipt": "yes"}', '{"is_receipt": 1}', '{"is_receipt": "x"}')
+    with pytest.raises(ValueError):
+        classify(_email(), [])
+
+
+def test_classify_invalid_json_not_retried(monkeypatch):
+    import json as _json
+    calls = _mock_llm_raw(monkeypatch, "not json at all")
+    with pytest.raises(_json.JSONDecodeError):
+        classify(_email(), [])
+    assert calls["n"] == 1  # JSON errors propagate immediately, no retry
