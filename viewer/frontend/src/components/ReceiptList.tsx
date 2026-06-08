@@ -8,7 +8,7 @@ import {
   Stack,
   Typography,
 } from "@mui/material";
-import { type Ledger, type ReceiptSummary } from "../api";
+import { type Ledger, type ReceiptRow } from "../api";
 
 // "Airwallet ApS <receipts@airwallet.net>" -> "Airwallet ApS". Falls back to
 // the whole string when there's no display name before the angle brackets.
@@ -27,13 +27,13 @@ const shortDate = (date: string) => {
 export const ReceiptList = ({
   ledger,
   receipts,
-  selectedBaseName,
+  selectedKey,
   onSelect,
 }: {
   ledger: Ledger | null,
-  receipts: ReceiptSummary[],
-  selectedBaseName: string | undefined,
-  onSelect: (baseName: string) => void,
+  receipts: ReceiptRow[],
+  selectedKey: string | undefined,
+  onSelect: (month: string, baseName: string) => void,
 }) => {
   const [compact, setCompact] = useState(false);
 
@@ -57,9 +57,9 @@ export const ReceiptList = ({
         {receipts.map((r) =>
           compact ? (
             <ListItemButton
-              key={r.base_name}
-              selected={selectedBaseName === r.base_name}
-              onClick={() => onSelect(r.base_name)}
+              key={`${r.month}:${r.base_name}`}
+              selected={selectedKey === `${r.month}:${r.base_name}`}
+              onClick={() => onSelect(r.month, r.base_name)}
               sx={{ display: "flex", gap: 1, alignItems: "baseline" }}
             >
               <Box
@@ -103,9 +103,9 @@ export const ReceiptList = ({
             </ListItemButton>
           ) : (
             <ListItemButton
-              key={r.base_name}
-              selected={selectedBaseName === r.base_name}
-              onClick={() => onSelect(r.base_name)}
+              key={`${r.month}:${r.base_name}`}
+              selected={selectedKey === `${r.month}:${r.base_name}`}
+              onClick={() => onSelect(r.month, r.base_name)}
             >
               <ListItemText
                 primary={r.subject || "(no subject)"}

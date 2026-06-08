@@ -9,7 +9,7 @@ import {
   type LabelCount,
   type Ledger,
   type Receipt,
-  type ReceiptSummary,
+  type ReceiptRow,
 } from "./api";
 import { CURRENT_YEAR, pad } from "./constants";
 import { AppHeader } from "./components/AppHeader";
@@ -22,15 +22,35 @@ import { ReceiptDetail } from "./components/ReceiptDetail";
 export const App = () => {
   const [months, setMonths] = useState<string[]>([]);
   const [year, setYear] = useState<number>(CURRENT_YEAR);
-  const [monthNum, setMonthNum] = useState<number>(new Date().getMonth() + 1);
+  const [selectedMonths, setSelectedMonths] = useState<Set<number>>(
+    new Set([new Date().getMonth() + 1]),
+  );
   const [ledger, setLedger] = useState<Ledger | null>(null);
-  const [receipts, setReceipts] = useState<ReceiptSummary[]>([]);
+  const [receipts, setReceipts] = useState<ReceiptRow[]>([]);
   const [selected, setSelected] = useState<Receipt | null>(null);
+  const [selectedMonth, setSelectedMonth] = useState<string>("");
   const [labels, setLabels] = useState<LabelCount[]>([]);
   const [onLabels, setOnLabels] = useState<Set<string>>(new Set());
   const [sidebarWidth, setSidebarWidth] = useState<number>(360);
 
-  const month = `${year}-${pad(monthNum)}`;
+  // The chosen months for the current year that actually have data, as
+  // "YYYY-MM" strings. Sorted so the merged list and ledger are stable.
+  const activeMonths = [...selectedMonths]
+    .map((m) => `${year}-${pad(m)}`)
+    .filter((m) => months.includes(m))
+    .sort();
+
+  const toggleMonth = (monthNum: number) => {
+    setSelectedMonths((prev) => {
+      const next = new Set(prev);
+      if (next.has(monthNum)) {
+        next.delete(monthNum);
+      } else {
+        next.add(monthNum);
+      }
+      return next;
+    });
+  };
 
   // Gather every label (with all-months counts) once on startup, and start
   // with all of them switched on so the list is unfiltered.
@@ -67,37 +87,70 @@ export const App = () => {
       if (list.length > 0) {
         const [y, m] = list[0].split("-");
         setYear(Number(y));
-        setMonthNum(Number(m));
+        setSelectedMonths(new Set([Number(m)]));
       }
     });
   }, []);
 
-  // When the chosen month changes, load its receipts and ledger summary. Only
-  // months that have data exist on the backend, so skip the request (and the
-  // 404) for empty months.
+  // When the chosen months change, load each one's receipts and ledger, then
+  // merge them. Each receipt is tagged with its month so it can still be
+  // opened. The combined list is sorted by base_name, which is a timestamp,
+  // giving a chronological order across months.
   useEffect(() => {
     setSelected(null);
-    if (!months.includes(month)) {
+    if (activeMonths.length === 0) {
       setReceipts([]);
       setLedger(null);
       return;
     }
-    fetchReceipts(month).then(setReceipts);
-    fetchLedger(month).then(setLedger);
-  }, [month, months]);
+    let cancelled = false;
 
-  const openReceipt = (baseName: string) => {
-    fetchReceipt(month, baseName).then(setSelected);
+    Promise.all(
+      activeMonths.map((m) =>
+        fetchReceipts(m).then((rows) =>
+          rows.map((r) => ({ ...r, month: m })),
+        ),
+      ),
+    ).then((perMonth) => {
+      if (cancelled) return;
+      const merged = perMonth
+        .flat()
+        .sort((a, b) => a.base_name.localeCompare(b.base_name));
+      setReceipts(merged);
+    });
+
+    Promise.all(activeMonths.map((m) => fetchLedger(m))).then((perMonth) => {
+      if (cancelled) return;
+      setLedger({
+        seen: perMonth.reduce((sum, l) => sum + l.seen, 0),
+        receipts: perMonth.reduce((sum, l) => sum + l.receipts, 0),
+      });
+    });
+
+    return () => {
+      cancelled = true;
+    };
+    // activeMonths is rebuilt each render; join it to a stable dependency.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeMonths.join(",")]);
+
+  const openReceipt = (m: string, baseName: string) => {
+    fetchReceipt(m, baseName).then((r) => {
+      setSelected(r);
+      setSelectedMonth(m);
+    });
   };
 
-  // Trigger a fetch for the selected month. Not wired to the backend yet;
+  // Trigger a fetch spanning the chosen months. Not wired to the backend yet;
   // for now it just shows the date range that would be sent.
   const runFetch = () => {
-    const since = `${month}-01`;
+    if (activeMonths.length === 0) return;
+    const first = activeMonths[0];
+    const last = activeMonths[activeMonths.length - 1];
+    const [ly, lm] = last.split("-").map(Number);
+    const since = `${first}-01`;
     const before =
-      monthNum === 12
-        ? `${year + 1}-01-01`
-        : `${year}-${pad(monthNum + 1)}-01`;
+      lm === 12 ? `${ly + 1}-01-01` : `${ly}-${pad(lm + 1)}-01`;
     alert(`Run fetch with:\nFETCH_SINCE=${since}\nFETCH_BEFORE=${before}`);
   };
 
@@ -121,17 +174,18 @@ export const App = () => {
           <MonthPicker
             months={months}
             year={year}
-            monthNum={monthNum}
-            month={month}
+            selectedMonths={selectedMonths}
             onYearChange={setYear}
-            onMonthChange={setMonthNum}
+            onMonthToggle={toggleMonth}
             onRunFetch={runFetch}
           />
 
           <ReceiptList
             ledger={ledger}
             receipts={visibleReceipts}
-            selectedBaseName={selected?.base_name}
+            selectedKey={
+              selected ? `${selectedMonth}:${selected.base_name}` : undefined
+            }
             onSelect={openReceipt}
           />
         </Box>
@@ -140,7 +194,7 @@ export const App = () => {
 
         <Box component="main" sx={{ flex: 1, overflowY: "auto", p: 3 }}>
           {selected ? (
-            <ReceiptDetail month={month} receipt={selected} />
+            <ReceiptDetail month={selectedMonth} receipt={selected} />
           ) : (
             <Typography color="text.disabled" sx={{ mt: 8, textAlign: "center" }}>
               Select a receipt

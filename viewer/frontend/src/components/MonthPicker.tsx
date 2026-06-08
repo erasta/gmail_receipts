@@ -12,18 +12,16 @@ const listSx = {
 export const MonthPicker = ({
   months,
   year,
-  monthNum,
-  month,
+  selectedMonths,
   onYearChange,
-  onMonthChange,
+  onMonthToggle,
   onRunFetch,
 }: {
   months: string[],
   year: number,
-  monthNum: number,
-  month: string,
+  selectedMonths: Set<number>,
   onYearChange: (year: number) => void,
-  onMonthChange: (monthNum: number) => void,
+  onMonthToggle: (monthNum: number) => void,
   onRunFetch: () => void,
 }) => {
   return (
@@ -52,8 +50,8 @@ export const MonthPicker = ({
               <MenuItem
                 key={m}
                 dense
-                selected={m === monthNum}
-                onClick={() => onMonthChange(m)}
+                selected={selectedMonths.has(m)}
+                onClick={() => onMonthToggle(m)}
                 sx={{ fontWeight: hasData ? 700 : 400 }}
               >
                 {MONTH_NAMES[m - 1]}
@@ -63,7 +61,7 @@ export const MonthPicker = ({
         </MenuList>
       </Stack>
       <Button variant="outlined" onClick={onRunFetch}>
-        Run fetch for {month}
+        Run fetch
       </Button>
     </Stack>
   );

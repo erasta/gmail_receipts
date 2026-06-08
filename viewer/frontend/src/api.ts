@@ -18,6 +18,12 @@ export type ReceiptSummary = {
   labels: string[];
 };
 
+// A summary row tagged with the month it came from, so a merged list spanning
+// several months can still open each receipt and its attachments.
+export type ReceiptRow = ReceiptSummary & {
+  month: string;
+};
+
 // One label and how many emails carry it, across all months.
 export type LabelCount = {
   label: string;
