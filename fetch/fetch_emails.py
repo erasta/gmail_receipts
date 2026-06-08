@@ -6,27 +6,13 @@ import sys
 import time
 from email.header import decode_header
 from datetime import date
+from html import escape
 import re
 
 import requests
 
 from process_email import process_email, _get_seen_message_ids
-from models import FetchedEmail, Attachment
-
-# Email header -> receipt JSON key for the extra fields captured per email.
-HEADER_FIELDS = {
-    "To": "to",
-    "Cc": "cc",
-    "Reply-To": "reply_to",
-    "Sender": "sender",
-    "Bcc": "bcc",
-    "Return-Path": "return_path",
-    "Delivered-To": "delivered_to",
-    "In-Reply-To": "in_reply_to",
-    "References": "references",
-    "List-Unsubscribe": "list_unsubscribe",
-    "List-Id": "list_id",
-}
+from models import Email, Attachment, HEADER_FIELDS
 
 
 def decode_header_value(value: str | None) -> str:
@@ -104,17 +90,17 @@ def _parse_labels(prefix: str) -> list[str]:
 
 def fetch_email(
     mail: imaplib.IMAP4_SSL, identifier: str, *, by_uid: bool
-) -> FetchedEmail | None:
-    """Fetch and parse one email into a FetchedEmail.
+) -> Email | None:
+    """Fetch and parse one email into an Email.
 
-    `by_uid` selects UID FETCH (located by UID) vs sequence FETCH. X-GM-LABELS
-    comes before RFC822 so the labels land in the response prefix, not after
-    the RFC822 literal (where _parse_labels wouldn't see them).
+    `by_uid` selects UID FETCH (located by UID) vs sequence FETCH. UID and
+    X-GM-LABELS come before RFC822 so they land in the response prefix, not
+    after the RFC822 literal (where they wouldn't be seen).
     """
     if by_uid:
-        status, msg_data = mail.uid("FETCH", identifier, "(X-GM-LABELS RFC822)")
+        status, msg_data = mail.uid("FETCH", identifier, "(UID X-GM-LABELS RFC822)")
     else:
-        status, msg_data = mail.fetch(identifier, "(X-GM-LABELS RFC822)")
+        status, msg_data = mail.fetch(identifier, "(UID X-GM-LABELS RFC822)")
     if status != "OK":
         return None
     part = msg_data[0]
@@ -125,20 +111,23 @@ def fetch_email(
         return None
     prefix = part[0].decode("utf-8", errors="replace") if isinstance(part[0], bytes) else ""
 
+    uid_match = re.search(r"UID (\d+)", prefix)
     text, html, attachments = _parse_full_email(raw)
     msg = email.message_from_bytes(raw)
-    return FetchedEmail(
-        text=text,
-        html=html,
+    return Email(
+        uid=uid_match.group(1) if uid_match else "",
+        message_id=msg["Message-ID"] or "",
+        date=msg["Date"] or "",
+        from_=decode_header_value(msg["From"]),
+        subject=decode_header_value(msg["Subject"]),
+        body=html or f"<pre>{escape(text)}</pre>",
         attachments=attachments,
         labels=_parse_labels(prefix),
-        subject=decode_header_value(msg["Subject"]),
-        from_=decode_header_value(msg["From"]),
-        date=msg["Date"] or "",
         headers={
             key: decode_header_value(msg[header])
             for header, key in HEADER_FIELDS.items()
         },
+        text=text,
     )
 
 
@@ -211,33 +200,12 @@ def main():
                 continue
             print(f"[{i}/{total}] processing {message_id}")
 
-            status, uid_data = mail.fetch(mid_str, "(UID)")
-            if status != "OK":
-                continue
-            uid_match = re.search(r"UID (\d+)", str(uid_data[0]))
-            if not uid_match:
-                continue
-            uid = uid_match.group(1)
-
             em = fetch_email(mail, mid_str, by_uid=False)
             if em is None:
                 continue
             print(f"fetch+parse: {time.time() - t_fetch:.2f}s")
 
-            process_email(
-                uid=uid,
-                message_id=message_id,
-                subject=em.subject,
-                from_=em.from_,
-                date_=em.date,
-                body=em.text,
-                download_attachments=lambda em=em: em.attachments,
-                body_html=em.html,
-                headers=em.headers,
-                labels=em.labels,
-                index=i,
-                total=total,
-            )
+            process_email(em, index=i, total=total)
         except imaplib.IMAP4.abort as e:
             print(f"IMAP aborted: {e}. Reconnecting in 10s...")
             time.sleep(10)

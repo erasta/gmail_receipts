@@ -94,21 +94,41 @@ def test_fetch_email_parses_everything():
     msg["From"] = "shop@example.com"
     msg["To"] = "me@example.com"
     msg["Date"] = "Mon, 03 Mar 2025 10:00:00 +0000"
+    msg["Message-ID"] = "<order-123@example.com>"
     msg.set_content("plain")
     msg.add_alternative("<b>html</b>", subtype="html")
     raw = msg.as_bytes()
 
-    prefix = r'1 (X-GM-LABELS ("Receipts" \Important) RFC822 {%d}' % len(raw)
+    prefix = r'1 (UID 42 X-GM-LABELS ("Receipts" \Important) RFC822 {%d}' % len(raw)
     mail = FakeMail(prefix, raw)
 
     em = fetch_email(cast(imaplib.IMAP4_SSL, mail), "1", by_uid=True)
     assert em is not None
+    assert em.uid == "42"
+    assert em.message_id == "<order-123@example.com>"
     assert em.subject == "Your order"
     assert em.from_ == "shop@example.com"
-    assert "plain" in em.text
-    assert "<b>html</b>" in em.html
+    assert "plain" in em.text                 # plain text kept for the classifier
+    assert "<b>html</b>" in em.body           # body is the HTML part
     assert em.labels == ["Receipts", "\\Important"]
     assert em.headers["to"] == "me@example.com"
+    assert em.classification is None
+
+
+def test_fetch_email_wraps_plain_text_as_html():
+    msg = EmailMessage()
+    msg["Subject"] = "Text only"
+    msg["From"] = "a@b.com"
+    msg["Date"] = "Mon, 03 Mar 2025 10:00:00 +0000"
+    msg.set_content("just text & <stuff>")
+    raw = msg.as_bytes()
+
+    prefix = r'1 (UID 7 X-GM-LABELS () RFC822 {%d}' % len(raw)
+    em = fetch_email(cast(imaplib.IMAP4_SSL, FakeMail(prefix, raw)), "1", by_uid=True)
+    assert em is not None
+    # no HTML part -> body is the escaped text wrapped in <pre>
+    assert em.body.startswith("<pre>")
+    assert "just text &amp; &lt;stuff&gt;" in em.body
 
 
 def test_fetch_email_returns_none_on_bad_status():

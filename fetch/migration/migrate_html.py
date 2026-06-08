@@ -86,13 +86,13 @@ def main():
         if em is None:
             sys.exit(f"ABORT: fetch failed for {rel} (uid {found_uid})")
 
-        data["body"] = em.html or em.text
+        data["body"] = em.body
         data["labels"] = em.labels
         data.update(em.headers)
 
         with open(path, "w", encoding="utf-8") as f:
             json.dump(data, f, indent=2, ensure_ascii=False)
-        print(f"[{i}/{total}] updated {rel} ({'html' if em.html else 'text'})")
+        print(f"[{i}/{total}] updated {rel}")
 
     mail.logout()
     print("\nDone.")

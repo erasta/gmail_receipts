@@ -5,9 +5,8 @@ import time
 from datetime import datetime
 from email.utils import parsedate_to_datetime
 import requests
-from typing import Callable
 
-from models import Attachment
+from models import Email
 
 OUTPUT_DIR = os.environ.get("OUTPUT_DIR", "/output")
 
@@ -54,33 +53,19 @@ Reply with ONLY valid JSON like this:
 {{"is_receipt": true, "confidence": 0.85, "reason": "order confirmation with total price"}}"""
 
 
-def process_email(
-    uid: str,
-    message_id: str,
-    subject: str,
-    from_: str,
-    date_: str,
-    body: str,
-    download_attachments: Callable[[], list["Attachment"]],
-    body_html: str = "",
-    headers: dict | None = None,
-    labels: list | None = None,
-    index: int = 0,
-    total: int = 0,
-):
+def process_email(email: Email, index: int = 0, total: int = 0):
     seen = _get_seen_message_ids()
-    if message_id in seen:
-        print(f"[{index}/{total}] skip (already processed) {message_id}")
+    if email.message_id in seen:
+        print(f"[{index}/{total}] skip (already processed) {email.message_id}")
         return
-    seen.add(message_id)
+    seen.add(email.message_id)
 
-    attachments = download_attachments()
-    attachment_names = [a.filename for a in attachments]
+    attachment_names = [a.filename for a in email.attachments]
 
-    body_preview = " ".join(body.split()[:5000])
+    body_preview = " ".join(email.text.split()[:5000])
     prompt = PROMPT_TEMPLATE.format(
-        from_=from_,
-        subject=subject,
+        from_=email.from_,
+        subject=email.subject,
         attachments=", ".join(attachment_names) if attachment_names else "None",
         body_preview=body_preview,
     )
@@ -110,18 +95,20 @@ def process_email(
     else:
         raise RuntimeError("classification loop ended without a result")
 
+    email.classification = result
+
     try:
-        dt = parsedate_to_datetime(date_)
+        dt = parsedate_to_datetime(email.date)
     except (ValueError, TypeError):
-        dt = datetime.fromisoformat(date_)
+        dt = datetime.fromisoformat(email.date)
     month = dt.strftime("%Y-%m")
     timestamp = dt.strftime("%Y-%m-%dT%H-%M-%S")
 
-    print(f"[{index}/{total}] UID: {uid}")
-    print(f"Date:    {date_}")
-    print(f"From:    {from_}")
-    print(f"Subject: {subject}")
-    print(f"Body:    {body[:100]}")
+    print(f"[{index}/{total}] UID: {email.uid}")
+    print(f"Date:    {email.date}")
+    print(f"From:    {email.from_}")
+    print(f"Subject: {email.subject}")
+    print(f"Body:    {email.body[:100]}")
     if attachment_names:
         print(f"Files:   {', '.join(attachment_names)}")
     print(f"LLM:     {raw}")
@@ -139,8 +126,8 @@ def process_email(
         with open(processed_path, "r", encoding="utf-8") as f:
             processed = json.load(f)
     processed.append({
-        "uid": uid,
-        "message_id": message_id,
+        "uid": email.uid,
+        "message_id": email.message_id,
         "timestamp": timestamp,
         "is_receipt": is_receipt,
     })
@@ -149,26 +136,5 @@ def process_email(
 
     if not is_receipt:
         return
-    base_name = f"{timestamp}_{uid}"
-
-    metadata = {
-        "uid": uid,
-        "message_id": message_id,
-        "date": date_,
-        "from": from_,
-        "subject": subject,
-        "body": body_html or body,
-        "classification": result,
-        "attachments": attachment_names,
-        "labels": labels or [],
-    }
-    metadata.update(headers or {})
-    with open(os.path.join(month_dir, f"{base_name}.json"), "w", encoding="utf-8") as f:
-        json.dump(metadata, f, indent=2, ensure_ascii=False)
-
-    if attachments:
-        att_dir = os.path.join(month_dir, base_name)
-        os.makedirs(att_dir, exist_ok=True)
-        for att in attachments:
-            with open(os.path.join(att_dir, att.filename), "wb") as f:
-                f.write(att.content)
+    base_name = f"{timestamp}_{email.uid}"
+    email.write(os.path.join(month_dir, f"{base_name}.json"))

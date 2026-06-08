@@ -4,7 +4,7 @@ import pytest
 
 import process_email as pe
 from process_email import process_email
-from models import Attachment
+from models import Attachment, Email
 
 
 @pytest.fixture
@@ -75,13 +75,19 @@ RECEIPTS = [
 
 
 def _run(s):
-    atts = [Attachment(n, c) for n, c in s["atts"]]
-    process_email(
-        uid=s["uid"], message_id=s["message_id"], subject=s["subject"],
-        from_=s["from_"], date_=s["date_"], body=s["body"],
-        download_attachments=lambda atts=atts: atts,
-        body_html=s["body_html"], headers=s["headers"], labels=s["labels"],
+    email = Email(
+        uid=s["uid"],
+        message_id=s["message_id"],
+        date=s["date_"],
+        from_=s["from_"],
+        subject=s["subject"],
+        body=s["body_html"] or s["body"],   # saved body (HTML, or plain when no HTML part)
+        attachments=[Attachment(n, c) for n, c in s["atts"]],
+        labels=s["labels"],
+        headers=s["headers"],
+        text=s["body"],                      # plain text used by the classifier
     )
+    process_email(email)
 
 
 @pytest.mark.parametrize("s", RECEIPTS, ids=[s["id"] for s in RECEIPTS])
