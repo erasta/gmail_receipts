@@ -89,6 +89,9 @@ def list_receipts(month: str) -> list[dict]:
             "attachments": data.get("attachments", []),
             "classification": data.get("classification"),
             "labels": data.get("labels", []),
+            "to": data.get("to"),
+            "cc": data.get("cc"),
+            "body": data.get("body"),
         })
     return receipts
 

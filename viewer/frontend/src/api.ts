@@ -16,6 +16,9 @@ export type ReceiptSummary = {
   attachments: string[];
   classification: Classification | null;
   labels: string[];
+  to: string | null;
+  cc: string | null;
+  body: string | null;
 };
 
 // A summary row tagged with the month it came from, so a merged list spanning

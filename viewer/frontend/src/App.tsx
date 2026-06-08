@@ -16,6 +16,7 @@ import { AppHeader } from "./components/AppHeader";
 import { LabelChips } from "./components/LabelChips";
 import { ResizeHandle } from "./components/ResizeHandle";
 import { MonthPicker } from "./components/MonthPicker";
+import { ReceiptFilter, type FilterField } from "./components/ReceiptFilter";
 import { ReceiptList } from "./components/ReceiptList";
 import { ReceiptDetail } from "./components/ReceiptDetail";
 
@@ -32,6 +33,22 @@ export const App = () => {
   const [labels, setLabels] = useState<LabelCount[]>([]);
   const [onLabels, setOnLabels] = useState<Set<string>>(new Set());
   const [sidebarWidth, setSidebarWidth] = useState<number>(360);
+  const [filterText, setFilterText] = useState<string>("");
+  const [filterFields, setFilterFields] = useState<Set<FilterField>>(
+    new Set(["subject", "body", "addresses"]),
+  );
+
+  const toggleFilterField = (field: FilterField) => {
+    setFilterFields((prev) => {
+      const next = new Set(prev);
+      if (next.has(field)) {
+        next.delete(field);
+      } else {
+        next.add(field);
+      }
+      return next;
+    });
+  };
 
   // The chosen months for the current year that actually have data, as
   // "YYYY-MM" strings. Sorted so the merged list and ledger are stable.
@@ -75,9 +92,22 @@ export const App = () => {
 
   // Show a receipt when any of its labels is switched on. Receipts with no
   // labels have nothing to switch off, so they always show.
-  const visibleReceipts = receipts.filter(
+  const labelFiltered = receipts.filter(
     (r) => r.labels.length === 0 || r.labels.some((l) => onLabels.has(l)),
   );
+
+  // Then narrow by the text box: an empty box shows everything; otherwise a
+  // receipt stays only if the text appears in one of the switched-on fields
+  // (subject, body, or any address: to/from/cc).
+  const needle = filterText.trim().toLowerCase();
+  const visibleReceipts = labelFiltered.filter((r) => {
+    if (needle === "") return true;
+    const haystacks: (string | null)[] = [];
+    if (filterFields.has("subject")) haystacks.push(r.subject);
+    if (filterFields.has("body")) haystacks.push(r.body);
+    if (filterFields.has("addresses")) haystacks.push(r.from, r.to, r.cc);
+    return haystacks.some((h) => h?.toLowerCase().includes(needle));
+  });
 
   // Load the months that have data and select the newest one; if there are
   // none, the selection stays on the current month (the initial state).
@@ -178,6 +208,13 @@ export const App = () => {
             onYearChange={setYear}
             onMonthToggle={toggleMonth}
             onRunFetch={runFetch}
+          />
+
+          <ReceiptFilter
+            text={filterText}
+            fields={filterFields}
+            onTextChange={setFilterText}
+            onToggleField={toggleFilterField}
           />
 
           <ReceiptList

@@ -45,7 +45,7 @@ export const ReceiptList = ({
       >
         {ledger && (
           <Typography variant="body2" color="text.secondary">
-            {ledger.receipts} receipts / {ledger.seen} emails seen
+            {receipts.length} / {ledger.receipts} receipts · {ledger.seen} seen
           </Typography>
         )}
         <Button size="small" onClick={() => setCompact((c) => !c)}>
