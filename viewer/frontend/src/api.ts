@@ -15,6 +15,13 @@ export type ReceiptSummary = {
   subject: string;
   attachments: string[];
   classification: Classification | null;
+  labels: string[];
+};
+
+// One label and how many emails carry it, across all months.
+export type LabelCount = {
+  label: string;
+  count: number;
 };
 
 // Full metadata for one receipt.
@@ -49,6 +56,8 @@ const getJson = async <T>(url: string): Promise<T> => {
 };
 
 export const fetchMonths = () => getJson<string[]>("/api/months");
+
+export const fetchLabels = () => getJson<LabelCount[]>("/api/labels");
 
 export const fetchReceipts = (month: string) =>
   getJson<ReceiptSummary[]>(`/api/months/${month}/receipts`);

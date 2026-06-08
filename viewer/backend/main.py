@@ -1,3 +1,4 @@
+import collections
 import glob
 import json
 import os
@@ -44,6 +45,27 @@ def list_months() -> list[str]:
     return sorted(months, reverse=True)
 
 
+@app.get("/api/labels")
+def list_labels() -> list[dict]:
+    """
+    Every label found across all months, with how many emails carry it.
+    Walks every receipt file (skipping the _processed.json ledgers) and
+    tallies the labels. Sorted by count, most common first.
+    """
+    counts: collections.Counter = collections.Counter()
+    for path in glob.glob(os.path.join(OUTPUT_DIR, "*", "*.json")):
+        if path.endswith("_processed.json"):
+            continue
+        with open(path, "r", encoding="utf-8") as f:
+            data = json.load(f)
+        for label in data.get("labels") or []:
+            counts[label] += 1
+    return [
+        {"label": label, "count": count}
+        for label, count in counts.most_common()
+    ]
+
+
 @app.get("/api/months/{month}/receipts")
 def list_receipts(month: str) -> list[dict]:
     """
@@ -66,6 +88,7 @@ def list_receipts(month: str) -> list[dict]:
             "subject": data.get("subject"),
             "attachments": data.get("attachments", []),
             "classification": data.get("classification"),
+            "labels": data.get("labels", []),
         })
     return receipts
 

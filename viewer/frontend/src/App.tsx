@@ -1,16 +1,19 @@
 import { useEffect, useState } from "react";
 import { Box, Typography } from "@mui/material";
 import {
+  fetchLabels,
   fetchLedger,
   fetchMonths,
   fetchReceipt,
   fetchReceipts,
+  type LabelCount,
   type Ledger,
   type Receipt,
   type ReceiptSummary,
 } from "./api";
 import { CURRENT_YEAR, pad } from "./constants";
 import { AppHeader } from "./components/AppHeader";
+import { LabelChips } from "./components/LabelChips";
 import { MonthPicker } from "./components/MonthPicker";
 import { ReceiptList } from "./components/ReceiptList";
 import { ReceiptDetail } from "./components/ReceiptDetail";
@@ -22,8 +25,37 @@ export const App = () => {
   const [ledger, setLedger] = useState<Ledger | null>(null);
   const [receipts, setReceipts] = useState<ReceiptSummary[]>([]);
   const [selected, setSelected] = useState<Receipt | null>(null);
+  const [labels, setLabels] = useState<LabelCount[]>([]);
+  const [onLabels, setOnLabels] = useState<Set<string>>(new Set());
 
   const month = `${year}-${pad(monthNum)}`;
+
+  // Gather every label (with all-months counts) once on startup, and start
+  // with all of them switched on so the list is unfiltered.
+  useEffect(() => {
+    fetchLabels().then((list) => {
+      setLabels(list);
+      setOnLabels(new Set(list.map((l) => l.label)));
+    });
+  }, []);
+
+  const toggleLabel = (label: string) => {
+    setOnLabels((prev) => {
+      const next = new Set(prev);
+      if (next.has(label)) {
+        next.delete(label);
+      } else {
+        next.add(label);
+      }
+      return next;
+    });
+  };
+
+  // Show a receipt when any of its labels is switched on. Receipts with no
+  // labels have nothing to switch off, so they always show.
+  const visibleReceipts = receipts.filter(
+    (r) => r.labels.length === 0 || r.labels.some((l) => onLabels.has(l)),
+  );
 
   // Load the months that have data and select the newest one; if there are
   // none, the selection stays on the current month (the initial state).
@@ -71,6 +103,8 @@ export const App = () => {
     <Box sx={{ display: "flex", flexDirection: "column", height: "100vh" }}>
       <AppHeader />
 
+      <LabelChips labels={labels} selected={onLabels} onToggle={toggleLabel} />
+
       <Box sx={{ display: "flex", flex: 1, minHeight: 0 }}>
         <Box
           component="aside"
@@ -96,7 +130,7 @@ export const App = () => {
 
           <ReceiptList
             ledger={ledger}
-            receipts={receipts}
+            receipts={visibleReceipts}
             selectedBaseName={selected?.base_name}
             onSelect={openReceipt}
           />
