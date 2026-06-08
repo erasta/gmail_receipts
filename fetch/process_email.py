@@ -53,15 +53,12 @@ Reply with ONLY valid JSON like this:
 {{"is_receipt": true, "confidence": 0.85, "reason": "order confirmation with total price"}}"""
 
 
-def process_email(email: Email, index: int = 0, total: int = 0):
-    seen = _get_seen_message_ids()
-    if email.message_id in seen:
-        print(f"[{index}/{total}] skip (already processed) {email.message_id}")
-        return
-    seen.add(email.message_id)
+def classify(email: Email, attachment_names: list[str]) -> dict:
+    """Ask the local LLM whether the email is a financial document.
 
-    attachment_names = [a.filename for a in email.attachments]
-
+    Returns the classification dict ({is_receipt, confidence, reason}); raises
+    if the model never returns a usable reply within max_attempts.
+    """
     body_preview = " ".join(email.text.split()[:5000])
     prompt = PROMPT_TEMPLATE.format(
         from_=email.from_,
@@ -72,14 +69,12 @@ def process_email(email: Email, index: int = 0, total: int = 0):
 
     max_attempts = 3
     for attempt in range(1, max_attempts + 1):
-        t0 = time.time()
         resp = requests.post(
             "http://localhost:11434/api/generate",
             json={"model": "llama3", "prompt": prompt, "stream": False, "format": "json"},
             timeout=200,
         )
         resp.raise_for_status()
-        duration = time.time() - t0
         raw = resp.json()["response"].strip()
 
         result = json.loads(raw)
@@ -87,15 +82,27 @@ def process_email(email: Email, index: int = 0, total: int = 0):
             is_receipt = result["is_receipt"]
             if not isinstance(is_receipt, bool):
                 raise ValueError(f"is_receipt must be bool, got {type(is_receipt).__name__}: {is_receipt!r}")
-            break
+            return result
         except (KeyError, ValueError) as e:
             print(f"[attempt {attempt}/{max_attempts}] bad LLM response: {e} — raw: {raw[:200]}")
             if attempt == max_attempts:
                 raise
-    else:
-        raise RuntimeError("classification loop ended without a result")
+    raise RuntimeError("classification loop ended without a result")
 
-    email.classification = result
+
+def process_email(email: Email, index: int = 0, total: int = 0):
+    seen = _get_seen_message_ids()
+    if email.message_id in seen:
+        print(f"[{index}/{total}] skip (already processed) {email.message_id}")
+        return
+    seen.add(email.message_id)
+
+    attachment_names = [a.filename for a in email.attachments]
+
+    t0 = time.time()
+    email.classification = classify(email, attachment_names)
+    duration = time.time() - t0
+    is_receipt = email.classification["is_receipt"]
 
     try:
         dt = parsedate_to_datetime(email.date)
@@ -111,7 +118,7 @@ def process_email(email: Email, index: int = 0, total: int = 0):
     print(f"Body:    {email.body[:100]}")
     if attachment_names:
         print(f"Files:   {', '.join(attachment_names)}")
-    print(f"LLM:     {raw}")
+    print(f"LLM:     {email.classification}")
     print(f"Time:    {duration:.1f}s")
     print()
     print("=" * 60)
