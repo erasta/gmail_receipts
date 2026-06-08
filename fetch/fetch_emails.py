@@ -4,7 +4,6 @@ import os
 import subprocess
 import sys
 import time
-from email.header import decode_header
 from datetime import date
 from html import escape
 import re
@@ -12,56 +11,8 @@ import re
 import requests
 
 from process_email import process_email, _get_seen_message_ids
-from models import Email, Attachment, HEADER_FIELDS
-
-
-def decode_header_value(value: str | None) -> str:
-    if value is None:
-        return ""
-    parts = decode_header(value)
-    decoded = []
-    for part, charset in parts:
-        if isinstance(part, bytes):
-            if charset == "unknown-8bit":
-                charset = None
-            if charset and charset.lower().endswith(("-i", "-e")):
-                charset = charset[:-2]
-            decoded.append(part.decode(charset or "utf-8", errors="replace"))
-        else:
-            decoded.append(part)
-    return "".join(decoded)
-
-
-def _parse_full_email(raw: bytes) -> tuple[str, str, list[Attachment]]:
-    msg = email.message_from_bytes(raw)
-    body_parts: list[str] = []
-    html_parts: list[str] = []
-    attachments: list[Attachment] = []
-
-    for part in msg.walk():
-        content_disposition = str(part.get("Content-Disposition") or "")
-        content_type = part.get_content_type()
-
-        if "attachment" in content_disposition:
-            filename = decode_header_value(part.get_filename()) or "unnamed"
-            payload = part.get_payload(decode=True)
-            if isinstance(payload, bytes):
-                attachments.append(Attachment(filename, payload))
-        elif content_type in ("text/plain", "text/html"):
-            payload = part.get_payload(decode=True)
-            if isinstance(payload, bytes):
-                charset = part.get_content_charset() or "utf-8"
-                if charset.lower().endswith(("-i", "-e")):
-                    charset = charset[:-2]
-                if charset == "unknown-8bit":
-                    charset = "utf-8"
-                decoded = payload.decode(charset, errors="replace")
-                if content_type == "text/plain":
-                    body_parts.append(decoded)
-                else:
-                    html_parts.append(decoded)
-
-    return "\n".join(body_parts), "\n".join(html_parts), attachments
+from mailbox import _parse_full_email, _parse_labels, decode_header_value
+from models import Email, HEADER_FIELDS
 
 
 def _fetch_raw(mail: imaplib.IMAP4_SSL, mid_str: str, what: str) -> bytes | None:
@@ -75,17 +26,6 @@ def _fetch_raw(mail: imaplib.IMAP4_SSL, mid_str: str, what: str) -> bytes | None
     if not isinstance(raw, bytes):
         return None
     return raw
-
-
-def _parse_labels(prefix: str) -> list[str]:
-    """Pull the Gmail labels out of an X-GM-LABELS fetch response prefix."""
-    m = re.search(r"X-GM-LABELS \((.*?)\)", prefix)
-    if not m:
-        return []
-    return [
-        quoted.replace('\\"', '"').replace("\\\\", "\\") or unquoted
-        for quoted, unquoted in re.findall(r'"((?:[^"\\]|\\.)*)"|(\S+)', m.group(1))
-    ]
 
 
 def fetch_email(
