@@ -1,4 +1,5 @@
 import { Button, MenuItem, MenuList, Stack } from "@mui/material";
+import { alpha } from "@mui/material/styles";
 import { MONTHS, MONTH_NAMES, YEARS, pad } from "../constants";
 
 const listSx = {
@@ -52,7 +53,16 @@ export const MonthPicker = ({
                 dense
                 selected={selectedMonths.has(m)}
                 onClick={() => onMonthToggle(m)}
-                sx={{ fontWeight: hasData ? 700 : 400 }}
+                sx={{
+                  fontWeight: hasData ? 700 : 400,
+                  "&.Mui-selected": {
+                    bgcolor: (theme) => alpha(theme.palette.primary.main, 0.18),
+                    "&:hover": {
+                      bgcolor: (theme) =>
+                        alpha(theme.palette.primary.main, 0.26),
+                    },
+                  },
+                }}
               >
                 {MONTH_NAMES[m - 1]}
               </MenuItem>
