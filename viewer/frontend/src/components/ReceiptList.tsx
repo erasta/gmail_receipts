@@ -90,9 +90,11 @@ export const ReceiptList = ({
         sx={{ mb: 1, alignItems: "center", justifyContent: "space-between" }}
       >
         <Typography variant="body2" color="text.secondary">
+          {ledger && `${ledger.receipts}/${ledger.seen} receipts `}
           {ledger &&
-            `${receipts.length} / ${ledger.receipts} receipts · ${ledger.seen} seen · `}
-          marked {markedShown}/{markedTotal}
+            receipts.length < ledger.receipts &&
+            `${receipts.length} filtered `}
+          {markedShown}/{markedTotal} marked
         </Typography>
         <Button size="small" onClick={() => setCompact((c) => !c)}>
           {compact ? "Full view" : "Compact view"}
