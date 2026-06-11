@@ -1,7 +1,14 @@
-import { IconButton, Stack, TextField, Tooltip } from "@mui/material";
+import {
+  IconButton,
+  InputAdornment,
+  Stack,
+  TextField,
+  Tooltip,
+} from "@mui/material";
 import SubjectIcon from "@mui/icons-material/Subject";
 import NotesIcon from "@mui/icons-material/Notes";
 import AlternateEmailIcon from "@mui/icons-material/AlternateEmail";
+import ClearIcon from "@mui/icons-material/Clear";
 
 // Which parts of an email the text filter looks in. "addresses" covers the
 // to, from and cc fields together.
@@ -36,6 +43,21 @@ export const ReceiptFilter = ({
         value={text}
         onChange={(e) => onTextChange(e.target.value)}
         sx={{ flex: 1 }}
+        slotProps={{
+          input: {
+            endAdornment: text && (
+              <InputAdornment position="end">
+                <IconButton
+                  size="small"
+                  aria-label="Clear filter"
+                  onClick={() => onTextChange("")}
+                >
+                  <ClearIcon fontSize="small" />
+                </IconButton>
+              </InputAdornment>
+            ),
+          },
+        }}
       />
       {FIELDS.map(({ field, label, icon }) => {
         const on = fields.has(field);
