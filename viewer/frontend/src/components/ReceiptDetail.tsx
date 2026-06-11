@@ -1,6 +1,7 @@
 import { Box, Button, Chip, Divider, Link, Stack, Typography } from "@mui/material";
 import PictureAsPdfIcon from "@mui/icons-material/PictureAsPdf";
 import html2pdf from "html2pdf.js";
+import { PDFDocument } from "pdf-lib";
 import { attachmentUrl, type Receipt } from "../api";
 import { isImage, isPdf } from "../constants";
 
@@ -32,16 +33,40 @@ export const ReceiptDetail = ({
 }) => {
   const c = receipt.classification;
 
-  const downloadPdf = () => {
-    html2pdf()
+  const downloadPdf = async () => {
+    // Render the email itself to PDF bytes.
+    const emailPdf: ArrayBuffer = await html2pdf()
       .set({
-        filename: `${receipt.base_name}.pdf`,
         margin: 10,
         html2canvas: { scale: 2, useCORS: true },
         jsPDF: { unit: "mm", format: "a4" },
       })
       .from(pdfDocument(receipt))
-      .save();
+      .outputPdf("arraybuffer");
+
+    // Start from the email, then append every PDF attachment page-for-page.
+    const merged = await PDFDocument.create();
+    const appendPdf = async (bytes: ArrayBuffer) => {
+      const doc = await PDFDocument.load(bytes, { ignoreEncryption: true });
+      const pages = await merged.copyPages(doc, doc.getPageIndices());
+      pages.forEach((page) => merged.addPage(page));
+    };
+
+    await appendPdf(emailPdf);
+    for (const filename of receipt.attachments.filter(isPdf)) {
+      const url = attachmentUrl(month, receipt.base_name, filename);
+      await appendPdf(await fetch(url).then((r) => r.arrayBuffer()));
+    }
+
+    const blob = new Blob([new Uint8Array(await merged.save())], {
+      type: "application/pdf",
+    });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `${receipt.base_name}.pdf`;
+    link.click();
+    URL.revokeObjectURL(url);
   };
   return (
     <Box>

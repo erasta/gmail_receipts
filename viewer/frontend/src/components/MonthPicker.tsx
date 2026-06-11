@@ -40,16 +40,38 @@ export const MonthPicker = ({
 }) => {
   const [collapsed, setCollapsed] = useState(true);
 
-  // How many receipts are marked for export in one "YYYY-MM" month, and across
-  // a whole year (every month that starts with "YYYY-").
-  const exportCount = (monthMarks: Record<string, MarkKind>) =>
-    Object.values(monthMarks).filter((k) => k === MarkKind.Export).length;
-  const monthMarkCount = (monthKey: string) =>
-    exportCount(marks[monthKey] ?? {});
-  const yearMarkCount = (y: number) =>
+  // How many receipts carry a given mark kind in one "YYYY-MM" month, and
+  // across a whole year (every month that starts with "YYYY-").
+  const kindCount = (monthMarks: Record<string, MarkKind>, kind: MarkKind) =>
+    Object.values(monthMarks).filter((k) => k === kind).length;
+  const monthCount = (monthKey: string, kind: MarkKind) =>
+    kindCount(marks[monthKey] ?? {}, kind);
+  const yearCount = (y: number, kind: MarkKind) =>
     Object.entries(marks)
       .filter(([monthKey]) => monthKey.startsWith(`${y}-`))
-      .reduce((sum, [, monthMarks]) => sum + exportCount(monthMarks), 0);
+      .reduce((sum, [, monthMarks]) => sum + kindCount(monthMarks, kind), 0);
+
+  // The export count (primary) and hide count (red) shown at the end of a row,
+  // each only when non-zero.
+  const counts = (marked: number, hidden: number) =>
+    marked > 0 || hidden > 0 ? (
+      <Stack direction="row" spacing={0.75} component="span">
+        {marked > 0 && (
+          <Typography component="span" variant="caption" color="primary">
+            {marked}
+          </Typography>
+        )}
+        {hidden > 0 && (
+          <Typography
+            component="span"
+            variant="caption"
+            sx={{ color: "error.main" }}
+          >
+            {hidden}
+          </Typography>
+        )}
+      </Stack>
+    ) : null;
 
   // A one-line, read-only recap of the chosen months, e.g. "2026: Jan, Mar".
   const summary = (() => {
@@ -88,7 +110,6 @@ export const MonthPicker = ({
         <MenuList sx={listSx}>
           {YEARS.map((y) => {
             const hasData = months.some((m) => m.startsWith(`${y}-`));
-            const marked = yearMarkCount(y);
             return (
               <MenuItem
                 key={y}
@@ -101,10 +122,9 @@ export const MonthPicker = ({
                 }}
               >
                 {y}
-                {marked > 0 && (
-                  <Typography component="span" variant="caption" color="primary">
-                    {marked}
-                  </Typography>
+                {counts(
+                  yearCount(y, MarkKind.Export),
+                  yearCount(y, MarkKind.Hide),
                 )}
               </MenuItem>
             );
@@ -113,7 +133,7 @@ export const MonthPicker = ({
         <MenuList sx={listSx}>
           {MONTHS.map((m) => {
             const hasData = months.includes(`${year}-${pad(m)}`);
-            const marked = monthMarkCount(`${year}-${pad(m)}`);
+            const monthKey = `${year}-${pad(m)}`;
             return (
               <MenuItem
                 key={m}
@@ -133,10 +153,9 @@ export const MonthPicker = ({
                 }}
               >
                 {MONTH_NAMES[m - 1]}
-                {marked > 0 && (
-                  <Typography component="span" variant="caption" color="primary">
-                    {marked}
-                  </Typography>
+                {counts(
+                  monthCount(monthKey, MarkKind.Export),
+                  monthCount(monthKey, MarkKind.Hide),
                 )}
               </MenuItem>
             );

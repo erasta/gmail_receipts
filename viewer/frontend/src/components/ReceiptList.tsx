@@ -231,7 +231,12 @@ export const ReceiptList = ({
           {ledger &&
             receipts.length < ledger.receipts &&
             `[${receipts.length} filtered] `}
-          {markedShown}/{markedTotal} marked {hiddenShown}/{hiddenTotal} hidden
+          <Box component="span" sx={{ color: "primary.main" }}>
+            {markedShown}/{markedTotal} marked
+          </Box>{" "}
+          <Box component="span" sx={{ color: "error.main" }}>
+            {hiddenShown}/{hiddenTotal} hidden
+          </Box>
         </Typography>
         <Stack direction="row" spacing={1} sx={{ flexShrink: 0 }}>
           <ViewModeButton
@@ -297,6 +302,19 @@ export const ReceiptList = ({
               >
                 {shortFrom(r.from)}
               </Box>
+              {r.attachments.length > 0 && (
+                <Box
+                  component="span"
+                  sx={{
+                    flexShrink: 0,
+                    color: "text.secondary",
+                    fontSize: "0.8rem",
+                    whiteSpace: "nowrap",
+                  }}
+                >
+                  📎{r.attachments.length}
+                </Box>
+              )}
               <Box
                 component="span"
                 sx={{
