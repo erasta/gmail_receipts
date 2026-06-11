@@ -120,19 +120,22 @@ def get_receipt(month: str, base_name: str) -> dict:
 @app.get("/api/months/{month}/ledger")
 def get_ledger(month: str) -> dict:
     """
-    Summary from the month's _processed.json ledger: how many emails were
-    seen and how many were classified as receipts.
+    How many emails were seen this month and how many are receipts. A receipt is
+    counted by the presence of its per-receipt file, not the ledger's is_receipt
+    flag, so deleting a file correctly drops it from the count.
     """
     month_dir = _month_dir(month)
+    receipts = sum(
+        1 for p in glob.glob(os.path.join(month_dir, "*.json"))
+        if not p.endswith("_processed.json")
+    )
+    # "seen" (emails scanned) still comes from the processed ledger.
     path = os.path.join(month_dir, f"{month}_processed.json")
-    if not os.path.isfile(path):
-        return {"seen": 0, "receipts": 0}
-    with open(path, "r", encoding="utf-8") as f:
-        entries = json.load(f)
-    return {
-        "seen": len(entries),
-        "receipts": sum(1 for e in entries if e.get("is_receipt")),
-    }
+    seen = 0
+    if os.path.isfile(path):
+        with open(path, "r", encoding="utf-8") as f:
+            seen = len(json.load(f))
+    return {"seen": seen, "receipts": receipts}
 
 
 @app.get("/api/months/{month}/attachments/{base_name}/{filename}")
