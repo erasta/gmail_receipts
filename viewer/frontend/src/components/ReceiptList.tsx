@@ -32,6 +32,8 @@ export const ReceiptList = ({
   highlightedLabels,
   marks,
   onToggleMark,
+  showOnlyMarked,
+  onToggleShowOnlyMarked,
   selectedKey,
   onSelect,
 }: {
@@ -40,6 +42,8 @@ export const ReceiptList = ({
   highlightedLabels: Set<string>,
   marks: Marks,
   onToggleMark: (month: string, baseName: string, marked: boolean) => void,
+  showOnlyMarked: boolean,
+  onToggleShowOnlyMarked: () => void,
   selectedKey: string | undefined,
   onSelect: (month: string, baseName: string) => void,
 }) => {
@@ -96,9 +100,18 @@ export const ReceiptList = ({
             `${receipts.length} filtered `}
           {markedShown}/{markedTotal} marked
         </Typography>
-        <Button size="small" onClick={() => setCompact((c) => !c)}>
-          {compact ? "Full view" : "Compact view"}
-        </Button>
+        <Stack direction="row" spacing={1} sx={{ flexShrink: 0 }}>
+          <Button
+            size="small"
+            variant={showOnlyMarked ? "contained" : "text"}
+            onClick={onToggleShowOnlyMarked}
+          >
+            Marked only
+          </Button>
+          <Button size="small" onClick={() => setCompact((c) => !c)}>
+            {compact ? "Full view" : "Compact view"}
+          </Button>
+        </Stack>
       </Stack>
 
       <List dense sx={{ overflowY: "auto", flex: 1 }}>

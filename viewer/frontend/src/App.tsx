@@ -46,6 +46,7 @@ export const App = () => {
   const [sidebarWidth, setSidebarWidth] = useState<number>(
     () => window.innerWidth / 2,
   );
+  const [showOnlyMarked, setShowOnlyMarked] = useState<boolean>(false);
   const [filterText, setFilterText] = useState<string>("");
   const [filterFields, setFilterFields] = useState<Set<FilterField>>(
     new Set(["subject", "body", "addresses"]),
@@ -159,7 +160,7 @@ export const App = () => {
   // receipt stays only if the text appears in one of the switched-on fields
   // (subject, body, or any address: to/from/cc).
   const needle = filterText.trim().toLowerCase();
-  const visibleReceipts = labelFiltered.filter((r) => {
+  const textFiltered = labelFiltered.filter((r) => {
     if (needle === "") return true;
     const haystacks: (string | null)[] = [];
     if (filterFields.has("subject")) haystacks.push(r.subject);
@@ -167,6 +168,11 @@ export const App = () => {
     if (filterFields.has("addresses")) haystacks.push(r.from, r.to, r.cc);
     return haystacks.some((h) => h?.toLowerCase().includes(needle));
   });
+
+  // Finally, the "marked only" toggle keeps just the marked receipts.
+  const visibleReceipts = showOnlyMarked
+    ? textFiltered.filter((r) => marks[r.month]?.[r.base_name])
+    : textFiltered;
 
   // Load the months that have data and select the newest one; if there are
   // none, the selection stays on the current month (the initial state).
@@ -288,6 +294,8 @@ export const App = () => {
             highlightedLabels={highlightedLabels}
             marks={marks}
             onToggleMark={toggleMark}
+            showOnlyMarked={showOnlyMarked}
+            onToggleShowOnlyMarked={() => setShowOnlyMarked((v) => !v)}
             selectedKey={
               selected ? `${selectedMonth}:${selected.base_name}` : undefined
             }
