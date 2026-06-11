@@ -28,6 +28,8 @@ export const PdfResultDialog = ({
           <Stack direction="row" spacing={2} sx={{ p: 1, alignItems: "center" }}>
             <Button
               size="small"
+              variant="contained"
+              color="success"
               startIcon={<DownloadIcon />}
               component="a"
               href={result.url}
@@ -35,8 +37,15 @@ export const PdfResultDialog = ({
             >
               Download
             </Button>
-            <Typography variant="body2" color="text.secondary">
+            <Typography
+              variant="body2"
+              color="text.secondary"
+              sx={{ flexGrow: 1 }}
+            >
               {result.summary}
+            </Typography>
+            <Typography variant="body2" sx={{ fontFamily: "monospace" }}>
+              {result.downloadName}
             </Typography>
           </Stack>
           <Box
