@@ -1,4 +1,14 @@
-import { Button, MenuItem, MenuList, Stack } from "@mui/material";
+import { useState } from "react";
+import {
+  Button,
+  IconButton,
+  MenuItem,
+  MenuList,
+  Stack,
+  Typography,
+} from "@mui/material";
+import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
+import ExpandLessIcon from "@mui/icons-material/ExpandLess";
 import { alpha } from "@mui/material/styles";
 import { MONTHS, MONTH_NAMES, YEARS, pad } from "../constants";
 
@@ -25,6 +35,39 @@ export const MonthPicker = ({
   onMonthToggle: (monthNum: number) => void,
   onRunFetch: () => void,
 }) => {
+  const [collapsed, setCollapsed] = useState(false);
+
+  // A one-line, read-only recap of the chosen months, e.g. "2026: Jan, Mar".
+  const summary = (() => {
+    const chosen = [...selectedMonths]
+      .sort((a, b) => a - b)
+      .map((m) => MONTH_NAMES[m - 1]);
+    return chosen.length
+      ? `${year}: ${chosen.join(", ")}`
+      : `${year}: no months selected`;
+  })();
+
+  if (collapsed) {
+    return (
+      <Stack
+        direction="row"
+        spacing={1}
+        sx={{ mb: 1.5, alignItems: "center" }}
+      >
+        <Typography
+          variant="body2"
+          noWrap
+          sx={{ flex: 1, color: "text.secondary" }}
+        >
+          {summary}
+        </Typography>
+        <IconButton size="small" onClick={() => setCollapsed(false)}>
+          <ExpandMoreIcon fontSize="small" />
+        </IconButton>
+      </Stack>
+    );
+  }
+
   return (
     <Stack spacing={1} sx={{ mb: 1.5 }}>
       <Stack direction="row" spacing={1}>
@@ -69,10 +112,20 @@ export const MonthPicker = ({
             );
           })}
         </MenuList>
+        <IconButton
+          size="small"
+          onClick={() => setCollapsed(true)}
+          sx={{ alignSelf: "flex-start" }}
+        >
+          <ExpandLessIcon fontSize="small" />
+        </IconButton>
       </Stack>
-      <Button variant="outlined" onClick={onRunFetch}>
-        Run fetch
-      </Button>
+      {/* Fetch isn't wired up for daily use yet, so keep the button hidden. */}
+      {false && (
+        <Button variant="outlined" onClick={onRunFetch}>
+          Run fetch
+        </Button>
+      )}
     </Stack>
   );
 };
