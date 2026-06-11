@@ -50,22 +50,44 @@ export type MarkedPdfResult =
   | { tooBig: false, blob: Blob }
   | { tooBig: true, mb: number };
 
+// Reported as each marked receipt starts rendering: where we are, the current
+// receipt and its attachment count, and the bytes collected before it.
+export type ExportProgress = {
+  index: number, // 1-based position in the marked set
+  total: number,
+  month: string,
+  baseName: string,
+  attachments: number,
+  bytes: number,
+};
+
 // Many receipts -> one PDF, in the order given. Each target's attachments are
 // fetched per receipt; an orphaned mark (deleted file) is skipped. Stops early
-// once the running size passes limitBytes.
+// once the running size passes limitBytes. onProgress fires as each receipt
+// starts.
 export const buildMarkedPdf = async (
   targets: { month: string, baseName: string }[],
   limitBytes: number,
+  onProgress?: (p: ExportProgress) => void,
 ): Promise<MarkedPdfResult> => {
   const merged = await PDFDocument.create();
   let total = 0;
-  for (const { month, baseName } of targets) {
+  for (let index = 0; index < targets.length; index++) {
+    const { month, baseName } = targets[index];
     let attachments: string[];
     try {
       attachments = (await fetchReceipt(month, baseName)).attachments;
     } catch {
       continue; // marked file was deleted; skip this orphaned mark
     }
+    onProgress?.({
+      index: index + 1,
+      total: targets.length,
+      month,
+      baseName,
+      attachments: attachments.length,
+      bytes: total,
+    });
     total += await appendReceipt(merged, month, baseName, attachments);
     if (total > limitBytes) {
       return { tooBig: true, mb: Math.round(total / 1024 / 1024) };
