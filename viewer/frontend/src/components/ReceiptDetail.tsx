@@ -1,4 +1,14 @@
-import { Box, Button, Chip, Divider, Link, Stack, Typography } from "@mui/material";
+import { useState } from "react";
+import {
+  Box,
+  Button,
+  Chip,
+  Dialog,
+  Divider,
+  Link,
+  Stack,
+  Typography,
+} from "@mui/material";
 import PictureAsPdfIcon from "@mui/icons-material/PictureAsPdf";
 import html2pdf from "html2pdf.js";
 import { PDFDocument } from "pdf-lib";
@@ -33,7 +43,15 @@ export const ReceiptDetail = ({
 }) => {
   const c = receipt.classification;
 
-  const downloadPdf = async () => {
+  // The object URL of the generated PDF, shown in a dialog while set.
+  const [pdfUrl, setPdfUrl] = useState<string | null>(null);
+
+  const closePdf = () => {
+    if (pdfUrl) URL.revokeObjectURL(pdfUrl);
+    setPdfUrl(null);
+  };
+
+  const showPdf = async () => {
     // Render the email itself to PDF bytes.
     const emailPdf: ArrayBuffer = await html2pdf()
       .set({
@@ -61,12 +79,7 @@ export const ReceiptDetail = ({
     const blob = new Blob([new Uint8Array(await merged.save())], {
       type: "application/pdf",
     });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = `${receipt.base_name}.pdf`;
-    link.click();
-    URL.revokeObjectURL(url);
+    setPdfUrl(URL.createObjectURL(blob));
   };
   return (
     <Box>
@@ -82,12 +95,23 @@ export const ReceiptDetail = ({
           size="small"
           variant="outlined"
           startIcon={<PictureAsPdfIcon />}
-          onClick={downloadPdf}
+          onClick={showPdf}
           sx={{ flexShrink: 0 }}
         >
           PDF
         </Button>
       </Stack>
+
+      <Dialog open={pdfUrl !== null} onClose={closePdf} fullWidth maxWidth="lg">
+        {pdfUrl && (
+          <Box
+            component="iframe"
+            src={pdfUrl}
+            title="receipt pdf"
+            sx={{ width: "100%", height: "85vh", border: 0 }}
+          />
+        )}
+      </Dialog>
 
       <Box
         sx={{
