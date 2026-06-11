@@ -1,33 +1,29 @@
+import { type ReactNode } from "react";
 import { IconButton, Tooltip } from "@mui/material";
-import AddCircleIcon from "@mui/icons-material/AddCircle";
 
-// A small export toggle: marking a receipt stages it for export. Coloured when
-// in the export set, a faint grey otherwise. Its click is kept from reaching
-// the surrounding row so marking doesn't also open it.
+// A small icon toggle used for a row's marks. The caller supplies the icon
+// (already coloured for its on/off state) and what to do on click. The click is
+// kept from reaching the surrounding row so marking doesn't also open it.
 export const MarkToggle = ({
-  marked,
+  title,
   onToggle,
+  children,
 }: {
-  marked: boolean,
-  onToggle: (marked: boolean) => void,
+  title: string,
+  onToggle: () => void,
+  children: ReactNode,
 }) => {
   return (
-    <Tooltip
-      followCursor
-      title={marked ? "Marked for export" : "Mark for export"}
-    >
+    <Tooltip followCursor title={title}>
       <IconButton
         size="small"
         onClick={(e) => {
           e.stopPropagation();
-          onToggle(!marked);
+          onToggle();
         }}
-        sx={{ p: 0.25, mr: 0.5, flexShrink: 0 }}
+        sx={{ p: 0.25, flexShrink: 0 }}
       >
-        <AddCircleIcon
-          fontSize="small"
-          sx={{ color: marked ? "primary.main" : "text.disabled" }}
-        />
+        {children}
       </IconButton>
     </Tooltip>
   );

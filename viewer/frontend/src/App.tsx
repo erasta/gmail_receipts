@@ -9,12 +9,15 @@ import {
   fetchReceipts,
   saveMarks,
   setMark,
+  MarkKind,
   type LabelCount,
   type Ledger,
   type Marks,
+  type MarkUpdates,
   type Receipt,
   type ReceiptRow,
 } from "./api";
+import { ViewMode, nextViewMode } from "./components/ViewModeButton";
 import { CURRENT_YEAR, pad } from "./constants";
 import { AppHeader } from "./components/AppHeader";
 import { LabelChips, type LabelState } from "./components/LabelChips";
@@ -47,7 +50,9 @@ export const App = () => {
   const [sidebarWidth, setSidebarWidth] = useState<number>(
     () => window.innerWidth / 2,
   );
-  const [showOnlyMarked, setShowOnlyMarked] = useState<boolean>(false);
+  // How export marks and hide marks each filter the list (all / only / off).
+  const [markedView, setMarkedView] = useState<ViewMode>(ViewMode.All);
+  const [hiddenView, setHiddenView] = useState<ViewMode>(ViewMode.Without);
   const [filterText, setFilterText] = useState<string>("");
   const [filterFields, setFilterFields] = useState<Set<FilterField>>(
     new Set(["subject", "body", "addresses"]),
@@ -101,17 +106,25 @@ export const App = () => {
     fetchMarks().then(setMarks);
   }, []);
 
-  // Tick or untick a receipt; the backend persists it and hands back the full
-  // marks dict, which we use as the new state.
-  const toggleMark = (month: string, baseName: string, marked: boolean) => {
-    setMark(month, baseName, marked).then(setMarks);
+  // Set or clear one receipt's mark; the backend persists it and hands back the
+  // full marks dict, which we use as the new state.
+  const setReceiptMark = (
+    month: string,
+    baseName: string,
+    kind: MarkKind | null,
+  ) => {
+    setMark(month, baseName, kind).then(setMarks);
   };
 
-  // Mark or unmark every receipt currently in the list, in one batch request.
-  const markAllShown = (marked: boolean) => {
-    const updates: Marks = {};
-    for (const r of visibleReceipts) {
-      (updates[r.month] ??= {})[r.base_name] = marked;
+  // Apply one mark change to a batch of receipts (the right-click menu over a
+  // multi-selection), in a single request.
+  const applyMarks = (
+    targets: { month: string, base_name: string }[],
+    kind: MarkKind | null,
+  ) => {
+    const updates: MarkUpdates = {};
+    for (const t of targets) {
+      (updates[t.month] ??= {})[t.base_name] = kind;
     }
     saveMarks(updates).then(setMarks);
   };
@@ -179,10 +192,26 @@ export const App = () => {
     return haystacks.some((h) => h?.toLowerCase().includes(needle));
   });
 
-  // Finally, the "marked only" toggle keeps just the marked receipts.
-  const visibleReceipts = showOnlyMarked
-    ? textFiltered.filter((r) => marks[r.month]?.[r.base_name])
-    : textFiltered;
+  // Finally, the two view modes filter by mark kind. "all" lets everything
+  // through, "only" keeps just that kind, "without" drops it.
+  const matchesView = (
+    kind: MarkKind | undefined,
+    view: ViewMode,
+    target: MarkKind,
+  ) =>
+    view === ViewMode.All
+      ? true
+      : view === ViewMode.Only
+        ? kind === target
+        : kind !== target;
+
+  const visibleReceipts = textFiltered.filter((r) => {
+    const kind = marks[r.month]?.[r.base_name];
+    return (
+      matchesView(kind, markedView, MarkKind.Export) &&
+      matchesView(kind, hiddenView, MarkKind.Hide)
+    );
+  });
 
   // Load the months that have data and select the newest one; if there are
   // none, the selection stays on the current month (the initial state).
@@ -303,10 +332,12 @@ export const App = () => {
             receipts={visibleReceipts}
             highlightedLabels={highlightedLabels}
             marks={marks}
-            onToggleMark={toggleMark}
-            onMarkAll={markAllShown}
-            showOnlyMarked={showOnlyMarked}
-            onToggleShowOnlyMarked={() => setShowOnlyMarked((v) => !v)}
+            onSetMark={setReceiptMark}
+            onApplyMarks={applyMarks}
+            markedView={markedView}
+            hiddenView={hiddenView}
+            onCycleMarkedView={() => setMarkedView(nextViewMode)}
+            onCycleHiddenView={() => setHiddenView(nextViewMode)}
             selectedKey={
               selected ? `${selectedMonth}:${selected.base_name}` : undefined
             }

@@ -17,8 +17,9 @@ OUTPUT_DIR = os.path.abspath(OUTPUT_DIR)
 
 # Hand-picked marks live in a single file at the output root, kept entirely
 # separate from the per-month receipt folders so they survive re-fetches and
-# never touch the pipeline's output. Shape: month -> {base_name: true}, e.g.
-# {"2025-01": {"2025-01-24T03-23-27_407402": true}}.
+# never touch the pipeline's output. Each mark is a kind, "export" or "hide".
+# Shape: month -> {base_name: kind}, e.g.
+# {"2025-01": {"2025-01-24T03-23-27_407402": "export"}}.
 MARKS_PATH = os.path.join(OUTPUT_DIR, "marks.json")
 
 app = FastAPI(title="Gmail Receipts Viewer")
@@ -146,10 +147,10 @@ def get_attachment(month: str, base_name: str, filename: str) -> FileResponse:
 
 
 @app.get("/api/marks")
-def get_marks() -> dict[str, dict[str, bool]]:
+def get_marks() -> dict[str, dict[str, str]]:
     """
-    Every marked receipt, grouped by month, each month a {base_name: true} map:
-    {"2025-01": {"2025-01-24T03-23-27_407402": true}}.
+    Every marked receipt, grouped by month, each month a {base_name: kind} map:
+    {"2025-01": {"2025-01-24T03-23-27_407402": "export"}}.
     """
     if not os.path.isfile(MARKS_PATH):
         return {}
@@ -159,23 +160,25 @@ def get_marks() -> dict[str, dict[str, bool]]:
 
 @app.put("/api/marks")
 def set_marks(
-    updates: dict[str, dict[str, bool]] = Body(...),
-) -> dict[str, dict[str, bool]]:
+    updates: dict[str, dict[str, str | None]] = Body(...),
+) -> dict[str, dict[str, str]]:
     """
-    Mark or unmark a batch in one write and return the full marks dict. The body
-    is the same shape as the marks file -- month -> {base_name: true|false} --
-    where each value says whether to mark (true) or unmark (false) that receipt.
-    Applies every update, then drops any false mark or emptied month.
+    Set a batch of marks in one write and return the full marks dict. The body
+    is the same shape as the marks file -- month -> {base_name: kind} -- where
+    kind is "export", "hide", or null to clear that receipt's mark. Applies
+    every update, then drops any cleared mark or emptied month.
     """
     marks = get_marks()
 
-    # First apply every update onto the existing marks.
+    # Apply every update: a kind sets the mark, None clears it.
     for month, month_updates in updates.items():
-        for base_name, is_marked in month_updates.items():
-            marks.setdefault(month, {})[base_name] = is_marked
+        for base_name, kind in month_updates.items():
+            if kind is None:
+                marks.get(month, {}).pop(base_name, None)
+            else:
+                marks.setdefault(month, {})[base_name] = kind
 
-    # Then clean up: drop any false mark, then any month left with no marks.
-    marks = {m: {b: v for b, v in items.items() if v} for m, items in marks.items()}
+    # Drop any month left with no marks.
     marks = {m: items for m, items in marks.items() if items}
 
     with open(MARKS_PATH, "w", encoding="utf-8") as f:

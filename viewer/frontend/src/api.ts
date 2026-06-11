@@ -56,8 +56,21 @@ export type Ledger = {
   receipts: number;
 };
 
-// Hand-picked marks, grouped by month: { "2025-01": { "<base_name>": true } }.
-export type Marks = Record<string, Record<string, boolean>>;
+// A receipt can be marked one of two ways (mutually exclusive): Export to keep
+// it for the export set, or Hide to drop it from the list. A const object plus
+// a union type, since the project forbids real enums (erasableSyntaxOnly).
+export const MarkKind = {
+  Export: "export",
+  Hide: "hide",
+} as const;
+export type MarkKind = (typeof MarkKind)[keyof typeof MarkKind];
+
+// Hand-picked marks, grouped by month:
+// { "2025-01": { "<base_name>": "export" } }.
+export type Marks = Record<string, Record<string, MarkKind>>;
+
+// An update batch may set a kind, or null to clear a receipt's mark.
+export type MarkUpdates = Record<string, Record<string, MarkKind | null>>;
 
 const getJson = async <T>(url: string): Promise<T> => {
   const res = await fetch(url);
@@ -82,10 +95,10 @@ export const fetchLedger = (month: string) =>
 
 export const fetchMarks = () => getJson<Marks>("/api/marks");
 
-// Mark or unmark a batch of receipts in one request; the body is
-// month -> { base_name: true|false }. The backend returns the full updated
-// marks.
-export const saveMarks = async (updates: Marks): Promise<Marks> => {
+// Set a batch of receipt marks in one request; the body is
+// month -> { base_name: "export" | "hide" | null }, where null clears the mark.
+// The backend returns the full updated marks.
+export const saveMarks = async (updates: MarkUpdates): Promise<Marks> => {
   const res = await fetch("/api/marks", {
     method: "PUT",
     headers: { "Content-Type": "application/json" },
@@ -97,12 +110,12 @@ export const saveMarks = async (updates: Marks): Promise<Marks> => {
   return res.json();
 };
 
-// Mark or unmark one receipt, expressed as a one-entry batch.
+// Set or clear one receipt's mark, expressed as a one-entry batch.
 export const setMark = (
   month: string,
   baseName: string,
-  marked: boolean,
-): Promise<Marks> => saveMarks({ [month]: { [baseName]: marked } });
+  kind: MarkKind | null,
+): Promise<Marks> => saveMarks({ [month]: { [baseName]: kind } });
 
 export const attachmentUrl = (
   month: string,

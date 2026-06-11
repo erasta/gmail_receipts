@@ -39,7 +39,6 @@ export const ReceiptDetail = ({
         margin: 10,
         html2canvas: { scale: 2, useCORS: true },
         jsPDF: { unit: "mm", format: "a4" },
-        pagebreak: { mode: ["css", "legacy"] },
       })
       .from(pdfDocument(receipt))
       .save();

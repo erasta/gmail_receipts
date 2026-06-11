@@ -10,7 +10,7 @@ import {
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import ExpandLessIcon from "@mui/icons-material/ExpandLess";
 import { alpha } from "@mui/material/styles";
-import { type Marks } from "../api";
+import { MarkKind, type Marks } from "../api";
 import { MONTHS, MONTH_NAMES, YEARS, pad } from "../constants";
 
 const listSx = {
@@ -40,14 +40,16 @@ export const MonthPicker = ({
 }) => {
   const [collapsed, setCollapsed] = useState(true);
 
-  // How many receipts are marked in one "YYYY-MM" month, and across a whole
-  // year (every month that starts with "YYYY-").
+  // How many receipts are marked for export in one "YYYY-MM" month, and across
+  // a whole year (every month that starts with "YYYY-").
+  const exportCount = (monthMarks: Record<string, MarkKind>) =>
+    Object.values(monthMarks).filter((k) => k === MarkKind.Export).length;
   const monthMarkCount = (monthKey: string) =>
-    Object.keys(marks[monthKey] ?? {}).length;
+    exportCount(marks[monthKey] ?? {});
   const yearMarkCount = (y: number) =>
     Object.entries(marks)
       .filter(([monthKey]) => monthKey.startsWith(`${y}-`))
-      .reduce((sum, [, monthMarks]) => sum + Object.keys(monthMarks).length, 0);
+      .reduce((sum, [, monthMarks]) => sum + exportCount(monthMarks), 0);
 
   // A one-line, read-only recap of the chosen months, e.g. "2026: Jan, Mar".
   const summary = (() => {
