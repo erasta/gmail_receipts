@@ -13,7 +13,7 @@ import {
 } from "./api";
 import { CURRENT_YEAR, pad } from "./constants";
 import { AppHeader } from "./components/AppHeader";
-import { LabelChips } from "./components/LabelChips";
+import { LabelChips, type LabelState } from "./components/LabelChips";
 import { ResizeHandle } from "./components/ResizeHandle";
 import { MonthPicker } from "./components/MonthPicker";
 import { ReceiptFilter, type FilterField } from "./components/ReceiptFilter";
@@ -31,7 +31,7 @@ export const App = () => {
   const [selected, setSelected] = useState<Receipt | null>(null);
   const [selectedMonth, setSelectedMonth] = useState<string>("");
   const [labels, setLabels] = useState<LabelCount[]>([]);
-  const [onLabels, setOnLabels] = useState<Set<string>>(new Set());
+  const [labelStates, setLabelStates] = useState<Record<string, LabelState>>({});
   const [sidebarWidth, setSidebarWidth] = useState<number>(360);
   const [filterText, setFilterText] = useState<string>("");
   const [filterFields, setFilterFields] = useState<Set<FilterField>>(
@@ -70,30 +70,44 @@ export const App = () => {
   };
 
   // Gather every label (with all-months counts) once on startup, and start
-  // with all of them switched on so the list is unfiltered.
+  // every one in the "shown" state so the list is unfiltered.
   useEffect(() => {
     fetchLabels().then((list) => {
       setLabels(list);
-      setOnLabels(new Set(list.map((l) => l.label)));
+      setLabelStates(
+        Object.fromEntries(list.map((l) => [l.label, "shown"])),
+      );
     });
   }, []);
 
-  const toggleLabel = (label: string) => {
-    setOnLabels((prev) => {
-      const next = new Set(prev);
-      if (next.has(label)) {
-        next.delete(label);
-      } else {
-        next.add(label);
-      }
-      return next;
-    });
+  // Clicking a chip steps it shown -> hidden -> highlighted -> shown.
+  const cycleLabel = (label: string) => {
+    const next: Record<LabelState, LabelState> = {
+      shown: "hidden",
+      hidden: "highlighted",
+      highlighted: "shown",
+    };
+    setLabelStates((prev) => ({
+      ...prev,
+      [label]: next[prev[label] ?? "shown"],
+    }));
   };
 
-  // Show a receipt when any of its labels is switched on. Receipts with no
-  // labels have nothing to switch off, so they always show.
+  // Labels currently set to "highlighted"; receipts carrying any of these get
+  // a green marker in the list.
+  const highlightedLabels = new Set(
+    Object.entries(labelStates)
+      .filter(([, state]) => state === "highlighted")
+      .map(([label]) => label),
+  );
+
+  // Hide a receipt only when it has labels and every one of them is set to
+  // "hidden". A receipt with no labels, or with at least one shown/highlighted
+  // label, stays in the list.
   const labelFiltered = receipts.filter(
-    (r) => r.labels.length === 0 || r.labels.some((l) => onLabels.has(l)),
+    (r) =>
+      r.labels.length === 0 ||
+      r.labels.some((l) => (labelStates[l] ?? "shown") !== "hidden"),
   );
 
   // Then narrow by the text box: an empty box shows everything; otherwise a
@@ -188,7 +202,7 @@ export const App = () => {
     <Box sx={{ display: "flex", flexDirection: "column", height: "100vh" }}>
       <AppHeader />
 
-      <LabelChips labels={labels} selected={onLabels} onToggle={toggleLabel} />
+      <LabelChips labels={labels} states={labelStates} onCycle={cycleLabel} />
 
       <Box sx={{ display: "flex", flex: 1, minHeight: 0 }}>
         <Box
@@ -220,6 +234,7 @@ export const App = () => {
           <ReceiptList
             ledger={ledger}
             receipts={visibleReceipts}
+            highlightedLabels={highlightedLabels}
             selectedKey={
               selected ? `${selectedMonth}:${selected.base_name}` : undefined
             }

@@ -6,6 +6,7 @@ import {
   ListItemButton,
   ListItemText,
   Stack,
+  Tooltip,
   Typography,
 } from "@mui/material";
 import { type Ledger, type ReceiptRow } from "../api";
@@ -27,15 +28,38 @@ const shortDate = (date: string) => {
 export const ReceiptList = ({
   ledger,
   receipts,
+  highlightedLabels,
   selectedKey,
   onSelect,
 }: {
   ledger: Ledger | null,
   receipts: ReceiptRow[],
+  highlightedLabels: Set<string>,
   selectedKey: string | undefined,
   onSelect: (month: string, baseName: string) => void,
 }) => {
   const [compact, setCompact] = useState(false);
+
+  // A small green dot for receipts carrying a highlighted label; hovering it
+  // shows the receipt's full label list.
+  const marker = (r: ReceiptRow) => {
+    if (!r.labels.some((l) => highlightedLabels.has(l))) return null;
+    return (
+      <Tooltip title={r.labels.join(", ")}>
+        <Box
+          component="span"
+          sx={{
+            flexShrink: 0,
+            width: 9,
+            height: 9,
+            mr: 1,
+            borderRadius: "50%",
+            bgcolor: "success.main",
+          }}
+        />
+      </Tooltip>
+    );
+  };
 
   return (
     <>
@@ -60,8 +84,9 @@ export const ReceiptList = ({
               key={`${r.month}:${r.base_name}`}
               selected={selectedKey === `${r.month}:${r.base_name}`}
               onClick={() => onSelect(r.month, r.base_name)}
-              sx={{ display: "flex", gap: 1, alignItems: "baseline" }}
+              sx={{ display: "flex", gap: 1, alignItems: "center" }}
             >
+              {marker(r)}
               <Box
                 component="span"
                 sx={{
@@ -107,6 +132,7 @@ export const ReceiptList = ({
               selected={selectedKey === `${r.month}:${r.base_name}`}
               onClick={() => onSelect(r.month, r.base_name)}
             >
+              {marker(r)}
               <ListItemText
                 primary={r.subject || "(no subject)"}
                 secondary={
