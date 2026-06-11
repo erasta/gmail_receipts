@@ -15,6 +15,12 @@ OUTPUT_DIR = os.environ.get(
 )
 OUTPUT_DIR = os.path.abspath(OUTPUT_DIR)
 
+# Hand-picked marks live in a single file at the output root, kept entirely
+# separate from the per-month receipt folders so they survive re-fetches and
+# never touch the pipeline's output. Shape: month -> {base_name: true}, e.g.
+# {"2025-01": {"2025-01-24T03-23-27_407402": true}}.
+MARKS_PATH = os.path.join(OUTPUT_DIR, "marks.json")
+
 app = FastAPI(title="Gmail Receipts Viewer")
 
 # The Vite dev server runs on a different port, so allow it to call us.
@@ -137,6 +143,36 @@ def get_attachment(month: str, base_name: str, filename: str) -> FileResponse:
     if os.path.dirname(path) != att_dir or not os.path.isfile(path):
         raise HTTPException(status_code=404, detail="No such attachment")
     return FileResponse(path)
+
+
+@app.get("/api/marks")
+def get_marks() -> dict[str, dict[str, bool]]:
+    """
+    Every marked receipt, grouped by month, each month a {base_name: true} map:
+    {"2025-01": {"2025-01-24T03-23-27_407402": true}}.
+    """
+    if not os.path.isfile(MARKS_PATH):
+        return {}
+    with open(MARKS_PATH, "r", encoding="utf-8") as f:
+        return json.load(f)
+
+
+@app.put("/api/marks/{month}/{base_name}")
+def set_mark(month: str, base_name: str, marked: bool) -> dict[str, dict[str, bool]]:
+    """
+    Mark or unmark one receipt (?marked=true / ?marked=false) and return the
+    full marks dict. Adds or removes the base_name under its month, then writes
+    the file back, dropping any month whose map goes empty.
+    """
+    marks = get_marks()
+    month_marks = marks.get(month, {})
+    month_marks[base_name] = marked
+    marks[month] = {b: mrk for b, mrk in month_marks.items() if mrk}
+    marks = {m: items for m, items in marks.items() if items}
+
+    with open(MARKS_PATH, "w", encoding="utf-8") as f:
+        json.dump(marks, f, indent=2, ensure_ascii=False)
+    return marks
 
 
 if __name__ == "__main__":
