@@ -1,21 +1,23 @@
-import { Menu, MenuItem } from "@mui/material";
+import { Divider, Menu, MenuItem } from "@mui/material";
 import { MarkKind } from "../api";
 
-// The right-click menu over the receipt list. Each item applies one change to
-// every currently selected receipt: set a kind, or clear it (null).
+// The right-click menu over the receipt list. The mark items apply one change
+// to every selected receipt; "Copy path" copies their file paths.
 export const MarkContextMenu = ({
   position,
   count,
   onClose,
   onApply,
+  onCopyPath,
 }: {
   position: { left: number, top: number } | null,
   count: number,
   onClose: () => void,
   onApply: (kind: MarkKind | null) => void,
+  onCopyPath: () => void,
 }) => {
-  const apply = (kind: MarkKind | null) => () => {
-    onApply(kind);
+  const run = (action: () => void) => () => {
+    action();
     onClose();
   };
   return (
@@ -28,9 +30,15 @@ export const MarkContextMenu = ({
       <MenuItem disabled>
         {count} selected
       </MenuItem>
-      <MenuItem onClick={apply(MarkKind.Export)}>Mark for export</MenuItem>
-      <MenuItem onClick={apply(MarkKind.Hide)}>Hide</MenuItem>
-      <MenuItem onClick={apply(null)}>Clear mark</MenuItem>
+      <MenuItem onClick={run(() => onApply(MarkKind.Export))}>
+        Mark for export
+      </MenuItem>
+      <MenuItem onClick={run(() => onApply(MarkKind.Hide))}>Hide</MenuItem>
+      <MenuItem onClick={run(() => onApply(null))}>Clear mark</MenuItem>
+      <Divider />
+      <MenuItem onClick={run(onCopyPath)}>
+        Copy path{count > 1 ? "s" : ""}
+      </MenuItem>
     </Menu>
   );
 };

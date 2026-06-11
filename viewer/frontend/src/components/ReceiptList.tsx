@@ -206,6 +206,15 @@ export const ReceiptList = ({
     onApplyMarks(targets, kind);
   };
 
+  // Copy the selected receipts' file paths (one per line), relative to the
+  // pipeline's output folder.
+  const copyPaths = () => {
+    const paths = receipts
+      .filter((r) => chosen.has(keyOf(r)))
+      .map((r) => `output/${r.month}/${r.base_name}.json`);
+    navigator.clipboard.writeText(paths.join("\n"));
+  };
+
   // Shared props for a row in either view: selection highlight, the open-receipt
   // accent on the left, and the click/right-click handlers.
   const rowProps = (r: ReceiptRow, index: number) => ({
@@ -381,6 +390,7 @@ export const ReceiptList = ({
         count={chosen.size}
         onClose={() => setMenuPos(null)}
         onApply={applyToSelection}
+        onCopyPath={copyPaths}
       />
     </>
   );
