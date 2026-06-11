@@ -10,6 +10,7 @@ import {
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import ExpandLessIcon from "@mui/icons-material/ExpandLess";
 import { alpha } from "@mui/material/styles";
+import { type Marks } from "../api";
 import { MONTHS, MONTH_NAMES, YEARS, pad } from "../constants";
 
 const listSx = {
@@ -24,6 +25,7 @@ export const MonthPicker = ({
   months,
   year,
   selectedMonths,
+  marks,
   onYearChange,
   onMonthToggle,
   onRunFetch,
@@ -31,11 +33,21 @@ export const MonthPicker = ({
   months: string[],
   year: number,
   selectedMonths: Set<number>,
+  marks: Marks,
   onYearChange: (year: number) => void,
   onMonthToggle: (monthNum: number) => void,
   onRunFetch: () => void,
 }) => {
   const [collapsed, setCollapsed] = useState(true);
+
+  // How many receipts are marked in one "YYYY-MM" month, and across a whole
+  // year (every month that starts with "YYYY-").
+  const monthMarkCount = (monthKey: string) =>
+    Object.keys(marks[monthKey] ?? {}).length;
+  const yearMarkCount = (y: number) =>
+    Object.entries(marks)
+      .filter(([monthKey]) => monthKey.startsWith(`${y}-`))
+      .reduce((sum, [, monthMarks]) => sum + Object.keys(monthMarks).length, 0);
 
   // A one-line, read-only recap of the chosen months, e.g. "2026: Jan, Mar".
   const summary = (() => {
@@ -74,15 +86,24 @@ export const MonthPicker = ({
         <MenuList sx={listSx}>
           {YEARS.map((y) => {
             const hasData = months.some((m) => m.startsWith(`${y}-`));
+            const marked = yearMarkCount(y);
             return (
               <MenuItem
                 key={y}
                 dense
                 selected={y === year}
                 onClick={() => onYearChange(y)}
-                sx={{ fontWeight: hasData ? 700 : 400 }}
+                sx={{
+                  fontWeight: hasData ? 700 : 400,
+                  justifyContent: "space-between",
+                }}
               >
                 {y}
+                {marked > 0 && (
+                  <Typography component="span" variant="caption" color="primary">
+                    {marked}
+                  </Typography>
+                )}
               </MenuItem>
             );
           })}
@@ -90,6 +111,7 @@ export const MonthPicker = ({
         <MenuList sx={listSx}>
           {MONTHS.map((m) => {
             const hasData = months.includes(`${year}-${pad(m)}`);
+            const marked = monthMarkCount(`${year}-${pad(m)}`);
             return (
               <MenuItem
                 key={m}
@@ -98,6 +120,7 @@ export const MonthPicker = ({
                 onClick={() => onMonthToggle(m)}
                 sx={{
                   fontWeight: hasData ? 700 : 400,
+                  justifyContent: "space-between",
                   "&.Mui-selected": {
                     bgcolor: (theme) => alpha(theme.palette.primary.main, 0.18),
                     "&:hover": {
@@ -108,6 +131,11 @@ export const MonthPicker = ({
                 }}
               >
                 {MONTH_NAMES[m - 1]}
+                {marked > 0 && (
+                  <Typography component="span" variant="caption" color="primary">
+                    {marked}
+                  </Typography>
+                )}
               </MenuItem>
             );
           })}

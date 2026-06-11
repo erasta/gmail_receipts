@@ -269,6 +269,7 @@ export const App = () => {
             months={months}
             year={year}
             selectedMonths={selectedMonths}
+            marks={marks}
             onYearChange={setYear}
             onMonthToggle={toggleMonth}
             onRunFetch={runFetch}

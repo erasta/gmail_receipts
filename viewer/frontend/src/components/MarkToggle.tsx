@@ -12,7 +12,10 @@ export const MarkToggle = ({
   onToggle: (marked: boolean) => void,
 }) => {
   return (
-    <Tooltip title={marked ? "Marked for export" : "Mark for export"}>
+    <Tooltip
+      followCursor
+      title={marked ? "Marked for export" : "Mark for export"}
+    >
       <IconButton
         size="small"
         onClick={(e) => {

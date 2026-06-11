@@ -52,6 +52,16 @@ export const ReceiptList = ({
     />
   );
 
+  // How many of the rows currently shown are marked, and how many are marked
+  // across every month.
+  const markedShown = receipts.filter(
+    (r) => marks[r.month]?.[r.base_name],
+  ).length;
+  const markedTotal = Object.values(marks).reduce(
+    (sum, monthMarks) => sum + Object.keys(monthMarks).length,
+    0,
+  );
+
   // A small green dot for receipts carrying a highlighted label; hovering it
   // shows the receipt's full label list.
   const marker = (r: ReceiptRow) => {
@@ -79,11 +89,11 @@ export const ReceiptList = ({
         direction="row"
         sx={{ mb: 1, alignItems: "center", justifyContent: "space-between" }}
       >
-        {ledger && (
-          <Typography variant="body2" color="text.secondary">
-            {receipts.length} / {ledger.receipts} receipts · {ledger.seen} seen
-          </Typography>
-        )}
+        <Typography variant="body2" color="text.secondary">
+          {ledger &&
+            `${receipts.length} / ${ledger.receipts} receipts · ${ledger.seen} seen · `}
+          marked {markedShown}/{markedTotal}
+        </Typography>
         <Button size="small" onClick={() => setCompact((c) => !c)}>
           {compact ? "Full view" : "Compact view"}
         </Button>
