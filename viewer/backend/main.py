@@ -3,7 +3,7 @@ import glob
 import json
 import os
 
-from fastapi import FastAPI, HTTPException
+from fastapi import Body, FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 
@@ -157,17 +157,25 @@ def get_marks() -> dict[str, dict[str, bool]]:
         return json.load(f)
 
 
-@app.put("/api/marks/{month}/{base_name}")
-def set_mark(month: str, base_name: str, marked: bool) -> dict[str, dict[str, bool]]:
+@app.put("/api/marks")
+def set_marks(
+    updates: dict[str, dict[str, bool]] = Body(...),
+) -> dict[str, dict[str, bool]]:
     """
-    Mark or unmark one receipt (?marked=true / ?marked=false) and return the
-    full marks dict. Adds or removes the base_name under its month, then writes
-    the file back, dropping any month whose map goes empty.
+    Mark or unmark a batch in one write and return the full marks dict. The body
+    is the same shape as the marks file -- month -> {base_name: true|false} --
+    where each value says whether to mark (true) or unmark (false) that receipt.
+    Applies every update, then drops any false mark or emptied month.
     """
     marks = get_marks()
-    month_marks = marks.get(month, {})
-    month_marks[base_name] = marked
-    marks[month] = {b: mrk for b, mrk in month_marks.items() if mrk}
+
+    # First apply every update onto the existing marks.
+    for month, month_updates in updates.items():
+        for base_name, is_marked in month_updates.items():
+            marks.setdefault(month, {})[base_name] = is_marked
+
+    # Then clean up: drop any false mark, then any month left with no marks.
+    marks = {m: {b: v for b, v in items.items() if v} for m, items in marks.items()}
     marks = {m: items for m, items in marks.items() if items}
 
     with open(MARKS_PATH, "w", encoding="utf-8") as f:

@@ -82,19 +82,27 @@ export const fetchLedger = (month: string) =>
 
 export const fetchMarks = () => getJson<Marks>("/api/marks");
 
-// Mark or unmark one receipt; the backend returns the full updated marks.
-export const setMark = async (
-  month: string,
-  baseName: string,
-  marked: boolean,
-): Promise<Marks> => {
-  const url = `/api/marks/${month}/${encodeURIComponent(baseName)}?marked=${marked}`;
-  const res = await fetch(url, { method: "PUT" });
+// Mark or unmark a batch of receipts in one request; the body is
+// month -> { base_name: true|false }. The backend returns the full updated
+// marks.
+export const setMarks = async (updates: Marks): Promise<Marks> => {
+  const res = await fetch("/api/marks", {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(updates),
+  });
   if (!res.ok) {
-    throw new Error(`${res.status} ${res.statusText} for ${url}`);
+    throw new Error(`${res.status} ${res.statusText} for /api/marks`);
   }
   return res.json();
 };
+
+// Mark or unmark one receipt, expressed as a one-entry batch.
+export const setMark = (
+  month: string,
+  baseName: string,
+  marked: boolean,
+): Promise<Marks> => setMarks({ [month]: { [baseName]: marked } });
 
 export const attachmentUrl = (
   month: string,
