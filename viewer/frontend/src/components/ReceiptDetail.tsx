@@ -10,6 +10,7 @@ import {
   Typography,
 } from "@mui/material";
 import PictureAsPdfIcon from "@mui/icons-material/PictureAsPdf";
+import DownloadIcon from "@mui/icons-material/Download";
 import { attachmentUrl, type Receipt } from "../api";
 import { buildReceiptPdf } from "../pdfExport";
 import { isImage, isPdf } from "../constants";
@@ -62,12 +63,27 @@ export const ReceiptDetail = ({
 
       <Dialog open={pdfUrl !== null} onClose={closePdf} fullWidth maxWidth="lg">
         {pdfUrl && (
-          <Box
-            component="iframe"
-            src={pdfUrl}
-            title="receipt pdf"
-            sx={{ width: "100%", height: "85vh", border: 0 }}
-          />
+          <>
+            <Stack direction="row" sx={{ p: 1, justifyContent: "flex-end" }}>
+              {/* Our own download sets a real filename; the viewer's built-in
+                  button can't, since a blob URL carries no name. */}
+              <Button
+                size="small"
+                startIcon={<DownloadIcon />}
+                component="a"
+                href={pdfUrl}
+                download={`${receipt.base_name}.pdf`}
+              >
+                Download
+              </Button>
+            </Stack>
+            <Box
+              component="iframe"
+              src={pdfUrl}
+              title="receipt pdf"
+              sx={{ width: "100%", height: "80vh", border: 0 }}
+            />
+          </>
         )}
       </Dialog>
 
