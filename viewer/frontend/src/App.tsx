@@ -20,6 +20,7 @@ import {
 import { ViewMode, nextViewMode } from "./components/ViewModeButton";
 import { CURRENT_YEAR, pad } from "./constants";
 import { AppHeader } from "./components/AppHeader";
+import { ExportMarked } from "./components/ExportMarked";
 import { LabelChips, type LabelState } from "./components/LabelChips";
 import { ResizeHandle } from "./components/ResizeHandle";
 import { MonthPicker } from "./components/MonthPicker";
@@ -290,7 +291,9 @@ export const App = () => {
 
   return (
     <Box sx={{ display: "flex", flexDirection: "column", height: "100vh" }}>
-      <AppHeader />
+      <AppHeader>
+        <ExportMarked marks={marks} />
+      </AppHeader>
 
       <LabelChips
         labels={labels}
