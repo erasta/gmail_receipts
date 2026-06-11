@@ -1,9 +1,9 @@
 import { IconButton, Tooltip } from "@mui/material";
-import IosShareIcon from "@mui/icons-material/IosShare";
+import AddCircleIcon from "@mui/icons-material/AddCircle";
 
-// A small export (share) toggle: marking a receipt stages it for export.
-// Coloured when in the export set, a faint grey otherwise. Its click is kept
-// from reaching the surrounding row so marking doesn't also open it.
+// A small export toggle: marking a receipt stages it for export. Coloured when
+// in the export set, a faint grey otherwise. Its click is kept from reaching
+// the surrounding row so marking doesn't also open it.
 export const MarkToggle = ({
   marked,
   onToggle,
@@ -21,7 +21,7 @@ export const MarkToggle = ({
         }}
         sx={{ p: 0.25, mr: 0.5, flexShrink: 0 }}
       >
-        <IosShareIcon
+        <AddCircleIcon
           fontSize="small"
           sx={{ color: marked ? "primary.main" : "text.disabled" }}
         />

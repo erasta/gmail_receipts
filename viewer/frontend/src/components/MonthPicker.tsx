@@ -35,7 +35,7 @@ export const MonthPicker = ({
   onMonthToggle: (monthNum: number) => void,
   onRunFetch: () => void,
 }) => {
-  const [collapsed, setCollapsed] = useState(false);
+  const [collapsed, setCollapsed] = useState(true);
 
   // A one-line, read-only recap of the chosen months, e.g. "2026: Jan, Mar".
   const summary = (() => {

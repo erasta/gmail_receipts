@@ -43,7 +43,7 @@ export const ReceiptList = ({
   selectedKey: string | undefined,
   onSelect: (month: string, baseName: string) => void,
 }) => {
-  const [compact, setCompact] = useState(false);
+  const [compact, setCompact] = useState(true);
 
   const markBox = (r: ReceiptRow) => (
     <MarkToggle
