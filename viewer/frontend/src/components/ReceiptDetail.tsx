@@ -1,6 +1,27 @@
-import { Box, Chip, Divider, Link, Stack, Typography } from "@mui/material";
+import { Box, Button, Chip, Divider, Link, Stack, Typography } from "@mui/material";
+import PictureAsPdfIcon from "@mui/icons-material/PictureAsPdf";
+import html2pdf from "html2pdf.js";
 import { attachmentUrl, type Receipt } from "../api";
 import { isImage, isPdf } from "../constants";
+
+// A small header block (from / date / subject) above the email's own HTML,
+// built as one string so html2pdf renders it in its own off-screen container —
+// no need to reach into the body iframe to capture it.
+const pdfDocument = (receipt: Receipt) => {
+  const row = (label: string, value: string | null | undefined) =>
+    value
+      ? `<tr><td style="color:#666;padding:2px 8px;white-space:nowrap">${label}</td>` +
+        `<td dir="auto" style="padding:2px 8px">${value}</td></tr>`
+      : "";
+  return `<div style="font-family:Arial,sans-serif;color:#111" dir="auto">
+    <table style="border-collapse:collapse;margin-bottom:12px;font-size:13px">
+      ${row("From", receipt.from)}${row("To", receipt.to)}
+      ${row("Date", receipt.date)}${row("Subject", receipt.subject)}
+    </table>
+    <hr style="border:none;border-top:1px solid #ccc;margin:12px 0">
+    ${receipt.body}
+  </div>`;
+};
 
 export const ReceiptDetail = ({
   month,
@@ -10,11 +31,39 @@ export const ReceiptDetail = ({
   receipt: Receipt,
 }) => {
   const c = receipt.classification;
+
+  const downloadPdf = () => {
+    html2pdf()
+      .set({
+        filename: `${receipt.base_name}.pdf`,
+        margin: 10,
+        html2canvas: { scale: 2, useCORS: true },
+        jsPDF: { unit: "mm", format: "a4" },
+        pagebreak: { mode: ["css", "legacy"] },
+      })
+      .from(pdfDocument(receipt))
+      .save();
+  };
   return (
     <Box>
-      <Typography variant="h5" gutterBottom>
-        {receipt.subject || "(no subject)"}
-      </Typography>
+      <Stack
+        direction="row"
+        spacing={1}
+        sx={{ mb: 1, alignItems: "flex-start", justifyContent: "space-between" }}
+      >
+        <Typography variant="h5">
+          {receipt.subject || "(no subject)"}
+        </Typography>
+        <Button
+          size="small"
+          variant="outlined"
+          startIcon={<PictureAsPdfIcon />}
+          onClick={downloadPdf}
+          sx={{ flexShrink: 0 }}
+        >
+          PDF
+        </Button>
+      </Stack>
 
       <Box
         sx={{
