@@ -1,4 +1,4 @@
-import { Box, Chip } from "@mui/material";
+import { Box, Chip, Tooltip } from "@mui/material";
 import { type LabelCount } from "../api";
 
 // Each label chip cycles through three states on click:
@@ -17,10 +17,12 @@ export const LabelChips = ({
   labels,
   states,
   onCycle,
+  onShowOnly,
 }: {
   labels: LabelCount[],
   states: Record<string, LabelState>,
   onCycle: (label: string) => void,
+  onShowOnly: (label: string) => void,
 }) => {
   return (
     <Box
@@ -42,6 +44,24 @@ export const LabelChips = ({
             color={chipColor[state]}
             variant={state === "hidden" ? "outlined" : "filled"}
             onClick={() => onCycle(label)}
+            // The delete slot gives us a pressable dot on the right of the chip
+            // that doesn't trigger the chip's own cycle click.
+            onDelete={() => onShowOnly(label)}
+            deleteIcon={
+              <Tooltip title="Show only this label">
+                <Box
+                  component="span"
+                  sx={{
+                    width: 12,
+                    height: 12,
+                    borderRadius: "50%",
+                    bgcolor: "warning.main",
+                    cursor: "pointer",
+                    "&:hover": { bgcolor: "warning.dark" },
+                  }}
+                />
+              </Tooltip>
+            }
           />
         );
       })}

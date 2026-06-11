@@ -32,6 +32,12 @@ export const App = () => {
   const [selectedMonth, setSelectedMonth] = useState<string>("");
   const [labels, setLabels] = useState<LabelCount[]>([]);
   const [labelStates, setLabelStates] = useState<Record<string, LabelState>>({});
+  // When the "show only" dot is active, this holds that label plus the label
+  // states as they were just before, so pressing the dot again restores them.
+  const [showOnly, setShowOnly] = useState<{
+    label: string,
+    previous: Record<string, LabelState>,
+  } | null>(null);
   const [sidebarWidth, setSidebarWidth] = useState<number>(360);
   const [filterText, setFilterText] = useState<string>("");
   const [filterFields, setFilterFields] = useState<Set<FilterField>>(
@@ -91,6 +97,26 @@ export const App = () => {
       ...prev,
       [label]: next[prev[label] ?? "shown"],
     }));
+    // A manual change makes the saved "show only" snapshot stale, so forget it.
+    setShowOnly(null);
+  };
+
+  // The dot on a chip hides every other label and shows only this one.
+  // Pressing the same dot again restores the states as they were before.
+  const showOnlyLabel = (label: string) => {
+    if (showOnly?.label === label) {
+      setLabelStates(showOnly.previous);
+      setShowOnly(null);
+      return;
+    }
+    // Remember the states from before the first "show only" press, so a second
+    // press restores the original view even after hopping between labels.
+    setShowOnly({ label, previous: showOnly?.previous ?? labelStates });
+    setLabelStates((prev) =>
+      Object.fromEntries(
+        Object.keys(prev).map((l) => [l, l === label ? "shown" : "hidden"]),
+      ),
+    );
   };
 
   // Labels currently set to "highlighted"; receipts carrying any of these get
@@ -202,7 +228,12 @@ export const App = () => {
     <Box sx={{ display: "flex", flexDirection: "column", height: "100vh" }}>
       <AppHeader />
 
-      <LabelChips labels={labels} states={labelStates} onCycle={cycleLabel} />
+      <LabelChips
+        labels={labels}
+        states={labelStates}
+        onCycle={cycleLabel}
+        onShowOnly={showOnlyLabel}
+      />
 
       <Box sx={{ display: "flex", flex: 1, minHeight: 0 }}>
         <Box
