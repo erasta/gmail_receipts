@@ -3,11 +3,14 @@ import { Box, Typography } from "@mui/material";
 import {
   fetchLabels,
   fetchLedger,
+  fetchMarks,
   fetchMonths,
   fetchReceipt,
   fetchReceipts,
+  setMark,
   type LabelCount,
   type Ledger,
+  type Marks,
   type Receipt,
   type ReceiptRow,
 } from "./api";
@@ -31,6 +34,7 @@ export const App = () => {
   const [selected, setSelected] = useState<Receipt | null>(null);
   const [selectedMonth, setSelectedMonth] = useState<string>("");
   const [labels, setLabels] = useState<LabelCount[]>([]);
+  const [marks, setMarks] = useState<Marks>({});
   const [labelStates, setLabelStates] = useState<Record<string, LabelState>>({});
   // When the "show only" dot is active, this holds that label plus the label
   // states as they were just before, so pressing the dot again restores them.
@@ -38,7 +42,10 @@ export const App = () => {
     label: string,
     previous: Record<string, LabelState>,
   } | null>(null);
-  const [sidebarWidth, setSidebarWidth] = useState<number>(360);
+  // Start the list/content divider at the middle of the window.
+  const [sidebarWidth, setSidebarWidth] = useState<number>(
+    () => window.innerWidth / 2,
+  );
   const [filterText, setFilterText] = useState<string>("");
   const [filterFields, setFilterFields] = useState<Set<FilterField>>(
     new Set(["subject", "body", "addresses"]),
@@ -85,6 +92,18 @@ export const App = () => {
       );
     });
   }, []);
+
+  // Load the marks once on startup so earlier sessions' picks are already
+  // ticked when the list opens.
+  useEffect(() => {
+    fetchMarks().then(setMarks);
+  }, []);
+
+  // Tick or untick a receipt; the backend persists it and hands back the full
+  // marks dict, which we use as the new state.
+  const toggleMark = (month: string, baseName: string, marked: boolean) => {
+    setMark(month, baseName, marked).then(setMarks);
+  };
 
   // Clicking a chip steps it shown -> hidden -> highlighted -> shown.
   const cycleLabel = (label: string) => {
@@ -266,6 +285,8 @@ export const App = () => {
             ledger={ledger}
             receipts={visibleReceipts}
             highlightedLabels={highlightedLabels}
+            marks={marks}
+            onToggleMark={toggleMark}
             selectedKey={
               selected ? `${selectedMonth}:${selected.base_name}` : undefined
             }

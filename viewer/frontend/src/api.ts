@@ -56,6 +56,9 @@ export type Ledger = {
   receipts: number;
 };
 
+// Hand-picked marks, grouped by month: { "2025-01": { "<base_name>": true } }.
+export type Marks = Record<string, Record<string, boolean>>;
+
 const getJson = async <T>(url: string): Promise<T> => {
   const res = await fetch(url);
   if (!res.ok) {
@@ -76,6 +79,22 @@ export const fetchReceipt = (month: string, baseName: string) =>
 
 export const fetchLedger = (month: string) =>
   getJson<Ledger>(`/api/months/${month}/ledger`);
+
+export const fetchMarks = () => getJson<Marks>("/api/marks");
+
+// Mark or unmark one receipt; the backend returns the full updated marks.
+export const setMark = async (
+  month: string,
+  baseName: string,
+  marked: boolean,
+): Promise<Marks> => {
+  const url = `/api/marks/${month}/${encodeURIComponent(baseName)}?marked=${marked}`;
+  const res = await fetch(url, { method: "PUT" });
+  if (!res.ok) {
+    throw new Error(`${res.status} ${res.statusText} for ${url}`);
+  }
+  return res.json();
+};
 
 export const attachmentUrl = (
   month: string,

@@ -9,7 +9,8 @@ import {
   Tooltip,
   Typography,
 } from "@mui/material";
-import { type Ledger, type ReceiptRow } from "../api";
+import { type Ledger, type Marks, type ReceiptRow } from "../api";
+import { MarkToggle } from "./MarkToggle";
 
 // "Airwallet ApS <receipts@airwallet.net>" -> "Airwallet ApS". Falls back to
 // the whole string when there's no display name before the angle brackets.
@@ -29,16 +30,27 @@ export const ReceiptList = ({
   ledger,
   receipts,
   highlightedLabels,
+  marks,
+  onToggleMark,
   selectedKey,
   onSelect,
 }: {
   ledger: Ledger | null,
   receipts: ReceiptRow[],
   highlightedLabels: Set<string>,
+  marks: Marks,
+  onToggleMark: (month: string, baseName: string, marked: boolean) => void,
   selectedKey: string | undefined,
   onSelect: (month: string, baseName: string) => void,
 }) => {
   const [compact, setCompact] = useState(false);
+
+  const markBox = (r: ReceiptRow) => (
+    <MarkToggle
+      marked={marks[r.month]?.[r.base_name] ?? false}
+      onToggle={(marked) => onToggleMark(r.month, r.base_name, marked)}
+    />
+  );
 
   // A small green dot for receipts carrying a highlighted label; hovering it
   // shows the receipt's full label list.
@@ -84,8 +96,9 @@ export const ReceiptList = ({
               key={`${r.month}:${r.base_name}`}
               selected={selectedKey === `${r.month}:${r.base_name}`}
               onClick={() => onSelect(r.month, r.base_name)}
-              sx={{ display: "flex", gap: 1, alignItems: "center" }}
+              sx={{ display: "flex", gap: 1, alignItems: "center", pl: 1 }}
             >
+              {markBox(r)}
               {marker(r)}
               <Box
                 component="span"
@@ -131,7 +144,9 @@ export const ReceiptList = ({
               key={`${r.month}:${r.base_name}`}
               selected={selectedKey === `${r.month}:${r.base_name}`}
               onClick={() => onSelect(r.month, r.base_name)}
+              sx={{ pl: 1 }}
             >
+              {markBox(r)}
               {marker(r)}
               <ListItemText
                 primary={r.subject || "(no subject)"}
