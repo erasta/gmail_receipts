@@ -1,18 +1,7 @@
-import { useState } from "react";
-import {
-  Box,
-  Button,
-  Chip,
-  Dialog,
-  Divider,
-  Link,
-  Stack,
-  Typography,
-} from "@mui/material";
+import { Box, Button, Chip, Divider, Link, Stack, Typography } from "@mui/material";
 import PictureAsPdfIcon from "@mui/icons-material/PictureAsPdf";
-import DownloadIcon from "@mui/icons-material/Download";
 import { attachmentUrl, type Receipt } from "../api";
-import { buildReceiptPdf } from "../pdfExport";
+import { usePdfExport } from "../usePdfExport";
 import { isImage, isPdf } from "../constants";
 
 export const ReceiptDetail = ({
@@ -23,23 +12,8 @@ export const ReceiptDetail = ({
   receipt: Receipt,
 }) => {
   const c = receipt.classification;
+  const { busy, start, dialogs } = usePdfExport();
 
-  // The object URL of the generated PDF, shown in a dialog while set.
-  const [pdfUrl, setPdfUrl] = useState<string | null>(null);
-
-  const closePdf = () => {
-    if (pdfUrl) URL.revokeObjectURL(pdfUrl);
-    setPdfUrl(null);
-  };
-
-  const showPdf = async () => {
-    const blob = await buildReceiptPdf(
-      month,
-      receipt.base_name,
-      receipt.attachments,
-    );
-    setPdfUrl(URL.createObjectURL(blob));
-  };
   return (
     <Box>
       <Stack
@@ -54,38 +28,20 @@ export const ReceiptDetail = ({
           size="small"
           variant="outlined"
           startIcon={<PictureAsPdfIcon />}
-          onClick={showPdf}
+          disabled={busy}
+          onClick={() =>
+            start(
+              [{ month, baseName: receipt.base_name }],
+              `${receipt.base_name}.pdf`,
+            )
+          }
           sx={{ flexShrink: 0 }}
         >
           PDF
         </Button>
       </Stack>
 
-      <Dialog open={pdfUrl !== null} onClose={closePdf} fullWidth maxWidth="lg">
-        {pdfUrl && (
-          <>
-            <Stack direction="row" sx={{ p: 1, justifyContent: "flex-end" }}>
-              {/* Our own download sets a real filename; the viewer's built-in
-                  button can't, since a blob URL carries no name. */}
-              <Button
-                size="small"
-                startIcon={<DownloadIcon />}
-                component="a"
-                href={pdfUrl}
-                download={`${receipt.base_name}.pdf`}
-              >
-                Download
-              </Button>
-            </Stack>
-            <Box
-              component="iframe"
-              src={pdfUrl}
-              title="receipt pdf"
-              sx={{ width: "100%", height: "80vh", border: 0 }}
-            />
-          </>
-        )}
-      </Dialog>
+      {dialogs}
 
       <Box
         sx={{

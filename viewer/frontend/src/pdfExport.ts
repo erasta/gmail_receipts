@@ -2,6 +2,9 @@ import { PDFDocument } from "pdf-lib";
 import { attachmentUrl, fetchReceipt, receiptPdfUrl } from "./api";
 import { isPdf } from "./constants";
 
+// Bytes as a one-decimal megabyte string, e.g. "4.2".
+export const formatMb = (bytes: number) => (bytes / 1024 / 1024).toFixed(1);
+
 const fetchBytes = (url: string) => fetch(url).then((r) => r.arrayBuffer());
 
 // Copy one PDF's pages onto the end of the merged document.
@@ -29,19 +32,6 @@ const appendReceipt = async (
     await append(await fetchBytes(attachmentUrl(month, baseName, name)));
   }
   return added;
-};
-
-// One receipt -> a PDF blob (rendered email plus its PDF attachments).
-export const buildReceiptPdf = async (
-  month: string,
-  baseName: string,
-  attachments: string[],
-): Promise<Blob> => {
-  const merged = await PDFDocument.create();
-  await appendReceipt(merged, month, baseName, attachments);
-  return new Blob([new Uint8Array(await merged.save())], {
-    type: "application/pdf",
-  });
 };
 
 // The merged PDF (with how many emails and attachments went in), or "too big"
