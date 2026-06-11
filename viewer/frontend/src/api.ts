@@ -117,6 +117,10 @@ export const setMark = (
   kind: MarkKind | null,
 ): Promise<Marks> => saveMarks({ [month]: { [baseName]: kind } });
 
+// The backend renders this email to a vector PDF (body only, no attachments).
+export const receiptPdfUrl = (month: string, baseName: string) =>
+  `/api/months/${month}/receipts/${encodeURIComponent(baseName)}/pdf`;
+
 export const attachmentUrl = (
   month: string,
   baseName: string,

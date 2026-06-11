@@ -3,7 +3,7 @@ import glob
 import json
 import os
 
-from fastapi import Body, FastAPI, HTTPException
+from fastapi import Body, FastAPI, HTTPException, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 
@@ -147,6 +147,64 @@ def get_attachment(month: str, base_name: str, filename: str) -> FileResponse:
     if os.path.dirname(path) != att_dir or not os.path.isfile(path):
         raise HTTPException(status_code=404, detail="No such attachment")
     return FileResponse(path)
+
+
+@app.get("/api/months/{month}/receipts/{base_name}/pdf")
+def render_receipt_pdf(month: str, base_name: str) -> Response:
+    """
+    Render just this email's HTML to a vector PDF with headless Chromium, with
+    no attachments -- the frontend merges those. Needs Playwright
+    (`pip install playwright` + `playwright install chromium`).
+    """
+    from html import escape
+    from playwright.sync_api import sync_playwright
+
+    data = get_receipt(month, base_name)
+
+    # A small header block (from / to / date / subject) above the email's saved
+    # HTML body. dir="auto" lets each line pick its own direction, so
+    # right-to-left Hebrew lays out correctly.
+    rows = ""
+    for label, value in (
+        ("From", data.get("from")),
+        ("To", data.get("to")),
+        ("Date", data.get("date")),
+        ("Subject", data.get("subject")),
+    ):
+        if value:
+            rows += (
+                f"<tr><td style='color:#666;padding:2px 8px'>{escape(label)}</td>"
+                f"<td dir='auto' style='padding:2px 8px'>{escape(str(value))}</td></tr>"
+            )
+    document = f"""<!doctype html>
+<html><head><meta charset="utf-8"><style>
+  body {{ font-family: Arial, sans-serif; margin: 24px; color: #111; }}
+  table.header {{ border-collapse: collapse; margin-bottom: 16px; font-size: 13px; }}
+  hr {{ border: none; border-top: 1px solid #ccc; margin: 16px 0; }}
+</style></head>
+<body dir="auto">
+  <table class="header"><tbody>{rows}</tbody></table>
+  <hr>
+  {data.get("body", "")}
+</body></html>"""
+
+    with sync_playwright() as playwright:
+        browser = playwright.chromium.launch()
+        page = browser.new_page()
+        page.set_content(document, wait_until="load")
+        pdf_bytes = page.pdf(
+            format="A4",
+            print_background=True,
+            margin={"top": "12mm", "bottom": "12mm",
+                    "left": "10mm", "right": "10mm"},
+        )
+        browser.close()
+
+    return Response(
+        content=pdf_bytes,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f'inline; filename="{base_name}.pdf"'},
+    )
 
 
 @app.get("/api/marks")

@@ -10,29 +10,9 @@ import {
   Typography,
 } from "@mui/material";
 import PictureAsPdfIcon from "@mui/icons-material/PictureAsPdf";
-import html2pdf from "html2pdf.js";
-import { PDFDocument } from "pdf-lib";
 import { attachmentUrl, type Receipt } from "../api";
+import { buildReceiptPdf } from "../pdfExport";
 import { isImage, isPdf } from "../constants";
-
-// A small header block (from / date / subject) above the email's own HTML,
-// built as one string so html2pdf renders it in its own off-screen container —
-// no need to reach into the body iframe to capture it.
-const pdfDocument = (receipt: Receipt) => {
-  const row = (label: string, value: string | null | undefined) =>
-    value
-      ? `<tr><td style="color:#666;padding:2px 8px;white-space:nowrap">${label}</td>` +
-        `<td dir="auto" style="padding:2px 8px">${value}</td></tr>`
-      : "";
-  return `<div style="font-family:Arial,sans-serif;color:#111" dir="auto">
-    <table style="border-collapse:collapse;margin-bottom:12px;font-size:13px">
-      ${row("From", receipt.from)}${row("To", receipt.to)}
-      ${row("Date", receipt.date)}${row("Subject", receipt.subject)}
-    </table>
-    <hr style="border:none;border-top:1px solid #ccc;margin:12px 0">
-    ${receipt.body}
-  </div>`;
-};
 
 export const ReceiptDetail = ({
   month,
@@ -52,33 +32,11 @@ export const ReceiptDetail = ({
   };
 
   const showPdf = async () => {
-    // Render the email itself to PDF bytes.
-    const emailPdf: ArrayBuffer = await html2pdf()
-      .set({
-        margin: 10,
-        html2canvas: { scale: 2, useCORS: true },
-        jsPDF: { unit: "mm", format: "a4" },
-      })
-      .from(pdfDocument(receipt))
-      .outputPdf("arraybuffer");
-
-    // Start from the email, then append every PDF attachment page-for-page.
-    const merged = await PDFDocument.create();
-    const appendPdf = async (bytes: ArrayBuffer) => {
-      const doc = await PDFDocument.load(bytes, { ignoreEncryption: true });
-      const pages = await merged.copyPages(doc, doc.getPageIndices());
-      pages.forEach((page) => merged.addPage(page));
-    };
-
-    await appendPdf(emailPdf);
-    for (const filename of receipt.attachments.filter(isPdf)) {
-      const url = attachmentUrl(month, receipt.base_name, filename);
-      await appendPdf(await fetch(url).then((r) => r.arrayBuffer()));
-    }
-
-    const blob = new Blob([new Uint8Array(await merged.save())], {
-      type: "application/pdf",
-    });
+    const blob = await buildReceiptPdf(
+      month,
+      receipt.base_name,
+      receipt.attachments,
+    );
     setPdfUrl(URL.createObjectURL(blob));
   };
   return (
