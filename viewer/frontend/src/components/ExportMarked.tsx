@@ -8,6 +8,7 @@ import {
   Typography,
 } from "@mui/material";
 import PictureAsPdfIcon from "@mui/icons-material/PictureAsPdf";
+import DownloadIcon from "@mui/icons-material/Download";
 import { MarkKind, type Marks } from "../api";
 import { buildMarkedPdf, type ExportProgress } from "../pdfExport";
 
@@ -21,7 +22,9 @@ export const ExportMarked = ({ marks }: { marks: Marks }) => {
   const [busy, setBusy] = useState(false);
   const [progress, setProgress] = useState<ExportProgress | null>(null);
   const [result, setResult] = useState<
-    { kind: "ready", url: string } | { kind: "tooBig", mb: number } | null
+    | { kind: "ready", url: string, summary: string }
+    | { kind: "tooBig", mb: number }
+    | null
   >(null);
 
   const targets = Object.entries(marks).flatMap(([month, items]) =>
@@ -38,13 +41,18 @@ export const ExportMarked = ({ marks }: { marks: Marks }) => {
   const exportMarked = async () => {
     setProgress(null);
     setBusy(true);
+    const started = performance.now();
     const out = await buildMarkedPdf(targets, PREVIEW_LIMIT, setProgress);
+    const seconds = ((performance.now() - started) / 1000).toFixed(1);
     setBusy(false);
-    setResult(
-      out.tooBig
-        ? { kind: "tooBig", mb: out.mb }
-        : { kind: "ready", url: URL.createObjectURL(out.blob) },
-    );
+    if (out.tooBig) {
+      setResult({ kind: "tooBig", mb: out.mb });
+      return;
+    }
+    const summary =
+      `${out.emails} emails · ${out.attachments} attachments · ` +
+      `${mb(out.blob.size)} MB · ${seconds}s`;
+    setResult({ kind: "ready", url: URL.createObjectURL(out.blob), summary });
   };
 
   return (
@@ -100,12 +108,32 @@ export const ExportMarked = ({ marks }: { marks: Marks }) => {
           </Box>
         )}
         {result?.kind === "ready" && (
-          <Box
-            component="iframe"
-            src={result.url}
-            title="marked receipts pdf"
-            sx={{ width: "100%", height: "85vh", border: 0 }}
-          />
+          <>
+            <Stack
+              direction="row"
+              spacing={2}
+              sx={{ p: 1, alignItems: "center" }}
+            >
+              <Button
+                size="small"
+                startIcon={<DownloadIcon />}
+                component="a"
+                href={result.url}
+                download="marked-receipts.pdf"
+              >
+                Download
+              </Button>
+              <Typography variant="body2" color="text.secondary">
+                {result.summary}
+              </Typography>
+            </Stack>
+            <Box
+              component="iframe"
+              src={result.url}
+              title="marked receipts pdf"
+              sx={{ width: "100%", height: "80vh", border: 0 }}
+            />
+          </>
         )}
       </Dialog>
     </>

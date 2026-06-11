@@ -44,10 +44,10 @@ export const buildReceiptPdf = async (
   });
 };
 
-// The merged PDF, or "too big" if it crossed limitBytes mid-build (we stop
-// there rather than finish rendering the rest). `mb` is the size so far.
+// The merged PDF (with how many emails and attachments went in), or "too big"
+// if it crossed limitBytes mid-build (we stop rather than finish the rest).
 export type MarkedPdfResult =
-  | { tooBig: false, blob: Blob }
+  | { tooBig: false, blob: Blob, emails: number, attachments: number }
   | { tooBig: true, mb: number };
 
 // Reported as each marked receipt starts rendering: where we are, the current
@@ -72,11 +72,13 @@ export const buildMarkedPdf = async (
 ): Promise<MarkedPdfResult> => {
   const merged = await PDFDocument.create();
   let total = 0;
+  let emails = 0;
+  let attachments = 0;
   for (let index = 0; index < targets.length; index++) {
     const { month, baseName } = targets[index];
-    let attachments: string[];
+    let attachmentList: string[];
     try {
-      attachments = (await fetchReceipt(month, baseName)).attachments;
+      attachmentList = (await fetchReceipt(month, baseName)).attachments;
     } catch {
       continue; // marked file was deleted; skip this orphaned mark
     }
@@ -85,10 +87,12 @@ export const buildMarkedPdf = async (
       total: targets.length,
       month,
       baseName,
-      attachments: attachments.length,
+      attachments: attachmentList.length,
       bytes: total,
     });
-    total += await appendReceipt(merged, month, baseName, attachments);
+    total += await appendReceipt(merged, month, baseName, attachmentList);
+    emails += 1;
+    attachments += attachmentList.filter(isPdf).length;
     if (total > limitBytes) {
       return { tooBig: true, mb: Math.round(total / 1024 / 1024) };
     }
@@ -96,5 +100,5 @@ export const buildMarkedPdf = async (
   const blob = new Blob([new Uint8Array(await merged.save())], {
     type: "application/pdf",
   });
-  return { tooBig: false, blob };
+  return { tooBig: false, blob, emails, attachments };
 };
