@@ -7,6 +7,7 @@ import {
   fetchMonths,
   fetchReceipt,
   fetchReceipts,
+  saveMarks,
   setMark,
   type LabelCount,
   type Ledger,
@@ -104,6 +105,15 @@ export const App = () => {
   // marks dict, which we use as the new state.
   const toggleMark = (month: string, baseName: string, marked: boolean) => {
     setMark(month, baseName, marked).then(setMarks);
+  };
+
+  // Mark or unmark every receipt currently in the list, in one batch request.
+  const markAllShown = (marked: boolean) => {
+    const updates: Marks = {};
+    for (const r of visibleReceipts) {
+      (updates[r.month] ??= {})[r.base_name] = marked;
+    }
+    saveMarks(updates).then(setMarks);
   };
 
   // Clicking a chip steps it shown -> hidden -> highlighted -> shown.
@@ -294,6 +304,7 @@ export const App = () => {
             highlightedLabels={highlightedLabels}
             marks={marks}
             onToggleMark={toggleMark}
+            onMarkAll={markAllShown}
             showOnlyMarked={showOnlyMarked}
             onToggleShowOnlyMarked={() => setShowOnlyMarked((v) => !v)}
             selectedKey={

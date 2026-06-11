@@ -32,6 +32,7 @@ export const ReceiptList = ({
   highlightedLabels,
   marks,
   onToggleMark,
+  onMarkAll,
   showOnlyMarked,
   onToggleShowOnlyMarked,
   selectedKey,
@@ -42,6 +43,7 @@ export const ReceiptList = ({
   highlightedLabels: Set<string>,
   marks: Marks,
   onToggleMark: (month: string, baseName: string, marked: boolean) => void,
+  onMarkAll: (marked: boolean) => void,
   showOnlyMarked: boolean,
   onToggleShowOnlyMarked: () => void,
   selectedKey: string | undefined,
@@ -101,6 +103,13 @@ export const ReceiptList = ({
           {markedShown}/{markedTotal} marked
         </Typography>
         <Stack direction="row" spacing={1} sx={{ flexShrink: 0 }}>
+          <Button
+            size="small"
+            disabled={receipts.length === 0}
+            onClick={() => onMarkAll(markedShown < receipts.length)}
+          >
+            {markedShown === receipts.length ? "Unmark all" : "Mark all"}
+          </Button>
           <Button
             size="small"
             variant={showOnlyMarked ? "contained" : "text"}

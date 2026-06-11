@@ -85,7 +85,7 @@ export const fetchMarks = () => getJson<Marks>("/api/marks");
 // Mark or unmark a batch of receipts in one request; the body is
 // month -> { base_name: true|false }. The backend returns the full updated
 // marks.
-export const setMarks = async (updates: Marks): Promise<Marks> => {
+export const saveMarks = async (updates: Marks): Promise<Marks> => {
   const res = await fetch("/api/marks", {
     method: "PUT",
     headers: { "Content-Type": "application/json" },
@@ -102,7 +102,7 @@ export const setMark = (
   month: string,
   baseName: string,
   marked: boolean,
-): Promise<Marks> => setMarks({ [month]: { [baseName]: marked } });
+): Promise<Marks> => saveMarks({ [month]: { [baseName]: marked } });
 
 export const attachmentUrl = (
   month: string,
