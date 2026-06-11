@@ -119,6 +119,13 @@ export const MonthPicker = ({
                 sx={{
                   fontWeight: hasData ? 700 : 400,
                   justifyContent: "space-between",
+                  "&.Mui-selected": {
+                    bgcolor: (theme) => alpha(theme.palette.primary.main, 0.18),
+                    "&:hover": {
+                      bgcolor: (theme) =>
+                        alpha(theme.palette.primary.main, 0.26),
+                    },
+                  },
                 }}
               >
                 {y}

@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   Box,
   Button,
@@ -9,6 +9,7 @@ import {
   Tooltip,
   Typography,
 } from "@mui/material";
+import { alpha, type Theme } from "@mui/material/styles";
 import AddCircleIcon from "@mui/icons-material/AddCircle";
 import VisibilityOffIcon from "@mui/icons-material/VisibilityOff";
 import { MarkKind, type Ledger, type Marks, type ReceiptRow } from "../api";
@@ -191,13 +192,26 @@ export const ReceiptList = ({
     setMenuPos({ left: e.clientX, top: e.clientY });
   };
 
-  // Ctrl/Cmd-A selects every row currently in the list.
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if ((e.ctrlKey || e.metaKey) && (e.key === "a" || e.key === "A")) {
+  // Ctrl/Cmd-A selects every row in the list, unless you're typing in a field.
+  // Listening on the document (not the list) so it works regardless of focus.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (!(e.ctrlKey || e.metaKey) || e.key.toLowerCase() !== "a") return;
+      const el = document.activeElement as HTMLElement | null;
+      if (
+        el &&
+        (el.tagName === "INPUT" ||
+          el.tagName === "TEXTAREA" ||
+          el.isContentEditable)
+      ) {
+        return;
+      }
       e.preventDefault();
-      setChosen(new Set(receipts.map(keyOf)));
-    }
-  };
+      setChosen(new Set(receipts.map((r) => `${r.month}:${r.base_name}`)));
+    };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [receipts]);
 
   const applyToSelection = (kind: MarkKind | null) => {
     const targets = receipts
@@ -226,6 +240,13 @@ export const ReceiptList = ({
       borderLeft: "3px solid",
       borderLeftColor:
         keyOf(r) === selectedKey ? "primary.main" : "transparent",
+      // Match the month picker's selected-month tint.
+      "&.Mui-selected": {
+        bgcolor: (theme: Theme) => alpha(theme.palette.primary.main, 0.18),
+        "&:hover": {
+          bgcolor: (theme: Theme) => alpha(theme.palette.primary.main, 0.26),
+        },
+      },
     },
   });
 
@@ -264,12 +285,7 @@ export const ReceiptList = ({
         </Stack>
       </Stack>
 
-      <List
-        dense
-        tabIndex={0}
-        onKeyDown={handleKeyDown}
-        sx={{ overflowY: "auto", flex: 1, outline: "none" }}
-      >
+      <List dense sx={{ overflowY: "auto", flex: 1 }}>
         {receipts.map((r, index) =>
           compact ? (
             <ListItemButton
